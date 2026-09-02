@@ -347,6 +347,9 @@
         button_icon:   btnIcon || 'arrow',
       });
       showToast('Checkout page disimpan!', 'success');
+      setTimeout(() => {
+        window.location.href = 'products-detail.html?id=' + product.id;
+      }, 1000);
     } catch(e) {
       showToast('Gagal simpan: ' + e.message, 'error');
     }

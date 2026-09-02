@@ -221,36 +221,29 @@
     if (!slug) { showError(); return; }
 
     try {
-      // Load product by slug
+      // Step 1: load product dulu (butuh product.id untuk query berikutnya)
       const products = await sbGet('products', `?slug=eq.${slug}&status=eq.active&limit=1`);
       if (!products.length) { showError(); return; }
       product = products[0];
 
-      // Load checkout page
-      let pages;
-      if (pageIdParam) {
-        pages = await sbGet('checkout_pages', `?id=eq.${pageIdParam}&limit=1`);
-      } else {
-        pages = await sbGet('checkout_pages', `?product_id=eq.${product.id}&order=created_at.asc&limit=1`);
-      }
+      // Step 2: load checkout page + CS list + rotator semua paralel
+      const pageQuery = pageIdParam
+        ? `?id=eq.${pageIdParam}&limit=1`
+        : `?product_id=eq.${product.id}&order=created_at.asc&limit=1`;
+
+      const [pages, csAssign, rotator] = await Promise.all([
+        sbGet('checkout_pages', pageQuery),
+        sbGet('product_cs', `?product_id=eq.${product.id}&select=cs_id,cs_team(id,name,wa_number,email)`),
+        sbGet('cs_rotator', `?product_id=eq.${product.id}&limit=1`).catch(() => []),
+      ]);
+
       if (!pages.length) { showError(); return; }
-      checkoutPage = pages[0];
+      checkoutPage  = pages[0];
+      assignedCS    = csAssign.map(a => a.cs_team).filter(Boolean);
+      rotatorIndex  = rotator[0]?.last_cs_index || 0;
 
-      // Load CS list for this product
-      const csAssign = await sbGet('product_cs', `?product_id=eq.${product.id}&select=cs_id,cs_team(id,name,wa_number,email)`);
-      assignedCS = csAssign.map(a => a.cs_team).filter(Boolean);
-
-      // Get rotator index
-      const rotator = await sbGet('cs_rotator', `?product_id=eq.${product.id}&limit=1`).catch(() => []);
-      rotatorIndex = rotator[0]?.last_cs_index || 0;
-
-      // Set title
       document.title = product.name + ' — Order';
-
-      // Init pixel (browser side)
       initPixel(product.pixel_id);
-
-      // Render page
       renderPage();
       document.getElementById('checkoutWrap').style.display = '';
 

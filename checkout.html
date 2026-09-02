@@ -324,6 +324,7 @@
     const customerAddress = getFieldVal('alamat');
     const customerCity    = getFieldVal('kota');
     const customerNote    = getFieldVal('catatan');
+    const customerKeluhan = getFieldVal('keluhan');
 
     // Pick CS (round-robin)
     const cs = assignedCS.length > 0 ? assignedCS[rotatorIndex % assignedCS.length] : null;
@@ -343,6 +344,7 @@
           customer_address: customerAddress || null,
           customer_city:    customerCity || null,
           customer_note:    customerNote || null,
+          customer_keluhan: customerKeluhan || null,
           status:           'pending',
         }),
       });
@@ -359,7 +361,8 @@
         });
       }
 
-      // 3. Send CAPI event (Lead) via Edge Function
+      // 3. Send CAPI event via Edge Function (event sesuai setting checkout page)
+      const capiEvent = checkoutPage.pixel_event || 'Lead';
       if (product.pixel_id && product.access_token) {
         fetch(`${API_URL}/send-capi`, {
           method: 'POST',
@@ -367,7 +370,7 @@
           body: JSON.stringify({
             pixel_id:      product.pixel_id,
             access_token:  product.access_token,
-            event_name:    'Lead',
+            event_name:    capiEvent,
             event_id:      eventId,
             event_time:    Math.floor(Date.now() / 1000),
             user_data: {
@@ -389,9 +392,9 @@
         }).catch(e => console.warn('CAPI error:', e));
       }
 
-      // 4. Fire browser pixel Lead event (for dedup)
+      // 4. Fire browser pixel event (for dedup)
       if (window.fbq && product.pixel_id) {
-        fbq('track', 'Lead', { value: product.price, currency: 'IDR' }, { eventID: eventId });
+        fbq('track', capiEvent, { value: product.price, currency: 'IDR' }, { eventID: eventId });
       }
 
       // 5. Send email notif to CS (via Edge Function)

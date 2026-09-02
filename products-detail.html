@@ -96,9 +96,12 @@
     <!-- Checkout pages table -->
     <div class="card">
       <div class="card-body" style="border-bottom:1px solid var(--gray-200);">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between flex-wrap gap-8">
           <div class="section-title">Checkout Pages</div>
-          <button class="btn btn-primary" onclick="createCheckoutPage()">＋ Create Checkout Page</button>
+          <div class="flex gap-8">
+            <button class="btn btn-outline" onclick="openEmbedModal()">&#60;/&#62; Embed Form</button>
+            <button class="btn btn-primary" onclick="createCheckoutPage()">＋ Create Checkout Page</button>
+          </div>
         </div>
       </div>
       <div class="table-wrap">
@@ -236,6 +239,58 @@
   </div>
 </div>
 
+<!-- Embed Modal -->
+<div class="modal-overlay hidden" id="embedModal">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">
+      <div class="modal-title">&#60;/&#62; Embed Checkout Form</div>
+      <button class="modal-close" onclick="closeEmbedModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:16px;">
+        Copy kode HTML di bawah ini dan paste ke landing page kamu. Form akan tampil langsung di halaman tersebut.
+      </div>
+
+      <!-- Pilih checkout page -->
+      <div class="form-group">
+        <label class="form-label">Pilih Checkout Page</label>
+        <select class="form-control" id="embedPageSelect" onchange="updateEmbedCode()"></select>
+      </div>
+
+      <!-- Pilih tipe embed -->
+      <div class="form-group">
+        <label class="form-label">Tipe Embed</label>
+        <div class="flex gap-8">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+            <input type="radio" name="embedType" value="iframe" checked onchange="updateEmbedCode()"> iframe (paling mudah)
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+            <input type="radio" name="embedType" value="popup" onchange="updateEmbedCode()"> Popup / Modal
+          </label>
+        </div>
+      </div>
+
+      <!-- Kode embed -->
+      <div class="form-group">
+        <label class="form-label">Kode HTML</label>
+        <textarea class="form-control" id="embedCode" style="min-height:140px;font-family:monospace;font-size:12px;" readonly onclick="this.select()"></textarea>
+      </div>
+
+      <button class="btn btn-primary" onclick="copyEmbed()">📋 Copy Kode</button>
+      <span id="copyDone" style="font-size:12px;color:var(--green);margin-left:8px;display:none;">✓ Copied!</span>
+
+      <hr class="divider">
+      <div style="font-size:12px;color:var(--gray-400);">
+        💡 <strong>Tips:</strong> Untuk landing page HTML biasa, paste kode iframe langsung di tempat kamu ingin form muncul.
+        Untuk WordPress/Elementor, gunakan blok "Custom HTML" dan paste kode di sana.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeEmbedModal()">Tutup</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/config.js"></script>
 <script src="js/navbar.js"></script>
 <script>
@@ -284,6 +339,7 @@
 
   async function loadCheckoutPages() {
     const pages = await sbGet('checkout_pages', `?product_id=eq.${productId}&order=created_at.asc`).catch(() => []);
+    checkoutPages = pages;
     const orders = await sbGet('orders', `?product_id=eq.${productId}&select=checkout_page_id,status`).catch(() => []);
 
     const tbody = document.getElementById('checkoutTable');
@@ -438,6 +494,74 @@
       closeEditModal();
       loadProduct();
     } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
+  }
+
+  // ── Embed modal ──
+  let checkoutPages = [];
+
+  function openEmbedModal() {
+    // populate select
+    const sel = document.getElementById('embedPageSelect');
+    sel.innerHTML = checkoutPages.length
+      ? checkoutPages.map(p => `<option value="${p.id}">${p.name}</option>`).join('')
+      : '<option value="">Belum ada checkout page</option>';
+    updateEmbedCode();
+    document.getElementById('embedModal').classList.remove('hidden');
+  }
+
+  function closeEmbedModal() { document.getElementById('embedModal').classList.add('hidden'); }
+
+  function updateEmbedCode() {
+    const pageId = document.getElementById('embedPageSelect').value;
+    const type   = document.querySelector('input[name="embedType"]:checked')?.value || 'iframe';
+    const slug   = product?.slug || '';
+    const baseUrl = 'https://orderadsy.vercel.app';
+    const formUrl = `${baseUrl}/checkout.html?slug=${slug}&page=${pageId}`;
+
+    let code = '';
+    if (type === 'iframe') {
+      code = `<!-- OrderAdsy Embed Form -->
+<iframe
+  src="${formUrl}"
+  width="100%"
+  height="700"
+  frameborder="0"
+  scrolling="no"
+  style="border:none;width:100%;max-width:520px;display:block;margin:0 auto;">
+</iframe>`;
+    } else {
+      code = `<!-- OrderAdsy Popup Form -->
+<button onclick="document.getElementById('oaModal').style.display='flex'"
+  style="background:#F59E0B;color:#fff;padding:14px 28px;border:none;
+         border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;">
+  Pesan Sekarang
+</button>
+
+<div id="oaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);
+     z-index:9999;align-items:center;justify-content:center;padding:16px;"
+     onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#fff;border-radius:12px;overflow:hidden;
+              width:100%;max-width:480px;max-height:90vh;position:relative;">
+    <button onclick="document.getElementById('oaModal').style.display='none'"
+      style="position:absolute;top:10px;right:12px;background:rgba(0,0,0,0.15);
+             border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;
+             font-size:16px;color:#333;z-index:1;">✕</button>
+    <iframe src="${formUrl}" width="100%" height="600"
+            frameborder="0" style="border:none;display:block;"></iframe>
+  </div>
+</div>`;
+    }
+
+    document.getElementById('embedCode').value = code;
+  }
+
+  function copyEmbed() {
+    const ta = document.getElementById('embedCode');
+    ta.select();
+    document.execCommand('copy');
+    const done = document.getElementById('copyDone');
+    done.style.display = 'inline';
+    setTimeout(() => done.style.display = 'none', 2000);
   }
 
   async function deleteThisProduct() {

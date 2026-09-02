@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
   const {
     cs_wa, cs_name, customer_name, customer_wa,
     customer_address, customer_city, customer_keluhan,
-    product_name, order_id,
+    product_name, order_id, wa_message,
   } = req.body || {};
 
   if (!cs_wa) return res.status(400).json({ error: 'cs_wa wajib' });
@@ -40,7 +40,7 @@ Halo ${cs_name || 'CS'}, ada order baru untuk kamu handle.
 📍 *Alamat:* ${alamat}${customer_keluhan ? `\n💬 *Keluhan:* ${customer_keluhan}` : ''}
 
 Balas customer:
-wa.me/${(customer_wa || '').replace(/\D/g, '')}`;
+https://wa.me/${(customer_wa || '').replace(/\D/g, '')}${wa_message ? '?text=' + encodeURIComponent(wa_message) : ''}`;
 
   try {
     const r = await fetch('https://api.fonnte.com/send', {

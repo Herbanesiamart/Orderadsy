@@ -66,18 +66,20 @@
   window.addEventListener('DOMContentLoaded', () => {
     dateFilter = new DateFilter(
       document.getElementById('dateFilterBtn'),
-      ({ from, to }) => { _currentFrom = from; _currentTo = to; loadProducts(from, to); }
+      ({ from, to }) => { _currentFrom = from; _currentTo = to; loadProducts(from, to); },
+      'Semua'
     );
   });
 
   async function loadProducts(from, to) {
     // Use provided range or fall back to last 30 days
-    const fromISO = from ? from.toISOString() : new Date(Date.now() - 29 * 86400000).toISOString();
-    const toISO   = to   ? to.toISOString()   : new Date().toISOString();
+    const dateFilter = from && to
+      ? `&created_at=gte.${from.toISOString()}&created_at=lte.${to.toISOString()}`
+      : '';
     try {
       const [products, orderStats] = await Promise.all([
         sbGet('products', '?order=created_at.desc&select=*'),
-        sbGet('orders', `?created_at=gte.${fromISO}&created_at=lte.${toISO}&select=product_id,status&limit=5000`).catch(() => [])
+        sbGet('orders', `?select=product_id,status${dateFilter}&limit=5000`).catch(() => [])
       ]);
 
       const statsMap = {};

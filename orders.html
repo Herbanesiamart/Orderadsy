@@ -83,7 +83,8 @@
   window.addEventListener('DOMContentLoaded', () => {
     dateFilter = new DateFilter(
       document.getElementById('dateFilterBtn'),
-      ({ from, to }) => { _dateFrom = from; _dateTo = to; loadOrders(1); }
+      ({ from, to }) => { _dateFrom = from; _dateTo = to; loadOrders(1); },
+      'Semua'
     );
   });
 

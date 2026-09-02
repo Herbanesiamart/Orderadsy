@@ -275,7 +275,7 @@
       const inputType = f.key === 'email' ? 'email' : f.key === 'wa' ? 'tel' : 'text';
       const isTextarea = f.key === 'keluhan' || f.key === 'catatan';
       const autocomplete = f.key==='nama'?'name':f.key==='wa'?'tel':f.key==='email'?'email':f.key==='alamat'?'street-address':'off';
-      const placeholder = f.label + (f.required ? ' *' : '');
+      const placeholder = f.label + ' *';
 
       const input = isTextarea
         ? `<textarea class="co-input" id="field-${f.key}" placeholder="${placeholder}" rows="3"></textarea>`
@@ -318,7 +318,8 @@
       const val = getFieldVal(f.key);
       const errEl = document.getElementById('err-' + f.key);
       const inputEl = document.getElementById('field-' + f.key);
-      if (f.required && !val) {
+      // Semua field yang ditampilkan wajib diisi
+      if (!val) {
         if (errEl) errEl.style.display = 'block';
         if (inputEl) inputEl.classList.add('error');
         valid = false;

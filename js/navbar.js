@@ -6,7 +6,10 @@ function renderNavbar(activePage) {
   const csName = getCSName();
 
   nav.innerHTML = `
-    <a href="dashboard.html" class="navbar-brand">Order<span>Adsy</span></a>
+    <a href="dashboard.html" class="navbar-brand">
+      <img src="img/logo-adsy.png" alt="Adsy" style="width:28px;height:28px;object-fit:contain;">
+      Order<span>Adsy</span>
+    </a>
     <nav class="navbar-nav">
       <a href="dashboard.html" class="nav-link ${activePage==='dashboard'?'active':''}">Dashboard</a>
       ${admin ? `<a href="products.html" class="nav-link ${activePage==='products'?'active':''}">Products</a>` : ''}

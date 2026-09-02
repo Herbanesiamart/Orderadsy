@@ -86,6 +86,15 @@
       ({ from, to }) => { _dateFrom = from; _dateTo = to; loadOrders(1); },
       'Semua'
     );
+
+    // Auto-open order detail if navigated from notification
+    const openId = new URLSearchParams(window.location.search).get('open');
+    if (openId) {
+      // Wait for orders to load, then open detail
+      window._pendingOpenId = openId;
+      // Clean URL
+      history.replaceState({}, '', 'orders.html');
+    }
   });
 
   async function loadOrders(page = 1) {
@@ -113,6 +122,18 @@
       totalCount = countRes.length;
       renderOrders(orders);
       renderPagination();
+
+      // Auto-open from notification link
+      if (window._pendingOpenId) {
+        const found = allOrders.find(o => o.id === window._pendingOpenId);
+        if (found) {
+          openDetail(window._pendingOpenId);
+        } else {
+          // Order not in current page (date filter hides it) — fetch it directly
+          _fetchAndOpenOrder(window._pendingOpenId);
+        }
+        window._pendingOpenId = null;
+      }
     } catch(e) {
       document.getElementById('ordersTable').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--red);">Gagal load: ${e.message}</td></tr>`;
     }
@@ -260,6 +281,17 @@
 
     const url = `https://wa.me/${n}${msg ? '?text=' + encodeURIComponent(msg) : ''}`;
     window.open(url, '_blank');
+  }
+
+  async function _fetchAndOpenOrder(id) {
+    try {
+      const res = await sbGet('orders', `?id=eq.${id}&select=*,products(name,followup_welcome),cs_team(name,wa_number)&limit=1`);
+      if (res && res[0]) {
+        // Inject into allOrders temporarily so openDetail can find it
+        if (!allOrders.find(o => o.id === id)) allOrders.unshift(res[0]);
+        openDetail(id);
+      }
+    } catch(e) {}
   }
 
   // Initial load is triggered by DateFilter's default (Last 30 Days) callback

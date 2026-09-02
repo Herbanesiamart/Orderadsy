@@ -379,6 +379,14 @@
       const orderData = await orderRes.json();
       const orderId = orderData[0]?.id;
 
+      // Hitung order hari ini (WIB = UTC+7)
+      const WIB_OFFSET = 7 * 60 * 60 * 1000;
+      const nowWIB = new Date(Date.now() + WIB_OFFSET);
+      nowWIB.setUTCHours(0, 0, 0, 0); // midnight WIB
+      const todayStartUTC = new Date(nowWIB.getTime() - WIB_OFFSET); // konversi balik ke UTC
+      const todayOrders = await sbGet('orders', `?product_id=eq.${product.id}&created_at=gte.${todayStartUTC.toISOString()}&select=id`).catch(() => []);
+      const orderNumberToday = todayOrders.length;
+
       // 2-5. Semua background tasks — fire and forget, tidak perlu ditunggu
       const capiEvent = checkoutPage.pixel_event || 'Lead';
 
@@ -441,7 +449,7 @@
             customer_address: customerAddress, customer_city: customerCity,
             customer_keluhan: customerKeluhan,
             product_name: product.name, order_id: orderId,
-            wa_message: waMessage,
+            wa_message: waMessage, order_number_today: orderNumberToday,
           }),
         }).catch(() => {});
       }
@@ -465,7 +473,7 @@
             customer_address: customerAddress, customer_city: customerCity,
             customer_keluhan: customerKeluhan,
             product_name: product.name, order_id: orderId,
-            wa_message: waMessage,
+            wa_message: waMessage, order_number_today: orderNumberToday,
           }),
         }).catch(() => {});
       }

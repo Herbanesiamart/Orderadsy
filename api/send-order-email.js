@@ -80,7 +80,7 @@ module.exports = async function handler(req, res) {
       </tr>
     </table>
     <div style="margin-top:20px;">
-      <a href="https://wa.me/${(customer_wa||'').replace(/\D/g,'')}${wa_message ? '?text=' + encodeURIComponent(wa_message) : ''}"
+      <a href="https://wa.me/${(customer_wa||'').replace(/\D/g,'')}"
          style="background:#25D366;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:700;font-size:14px;">
         💬 Hubungi via WhatsApp
       </a>

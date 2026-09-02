@@ -32,7 +32,8 @@ module.exports = async function handler(req, res) {
 
   const {
     to, cs_name, customer_name, customer_wa,
-    customer_address, customer_city, product_name, order_id,
+    customer_address, customer_city, customer_keluhan,
+    product_name, order_id,
   } = req.body || {};
 
   if (!to) return res.status(400).json({ error: 'email to wajib' });
@@ -68,6 +69,11 @@ module.exports = async function handler(req, res) {
         <td style="padding:8px 6px;color:#6B7280;">Produk</td>
         <td style="padding:8px 6px;"><strong>${product_name || '-'}</strong> Rp0</td>
       </tr>
+      ${customer_keluhan ? `
+      <tr>
+        <td style="padding:8px 0;color:#6B7280;">Keluhan</td>
+        <td style="padding:8px 0;">${customer_keluhan}</td>
+      </tr>` : ''}
       <tr>
         <td style="padding:8px 0;color:#6B7280;">Order ID</td>
         <td style="padding:8px 0;font-family:monospace;font-size:12px;">${order_id || '-'}</td>

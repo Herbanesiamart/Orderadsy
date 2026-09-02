@@ -621,3 +621,90 @@ select.form-control { cursor: pointer; }
 .mt-24 { margin-top: 24px; }
 .mb-8  { margin-bottom: 8px; }
 .mb-16 { margin-bottom: 16px; }
+
+/* ══════════════════════════════════════
+   MOBILE RESPONSIVE
+══════════════════════════════════════ */
+@media (max-width: 640px) {
+
+  /* Navbar */
+  .navbar { padding: 0 14px; height: 52px; }
+  .navbar-brand { font-size: 16px; margin-right: 16px; }
+  .navbar-nav { gap: 2px; }
+  .nav-link { padding: 5px 10px; font-size: 13px; }
+  .btn-add-product { display: none; }
+
+  /* Page layout */
+  .page-content { padding: 16px 12px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .page-header > div:last-child { width: 100%; }
+
+  /* KPI - 2 kolom di mobile */
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+  .kpi-card { padding: 14px 12px; gap: 8px; }
+  .kpi-value { font-size: 22px; }
+  .kpi-icon { width: 36px; height: 36px; font-size: 16px; }
+
+  /* Dashboard grid stack */
+  .dashboard-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  /* Modal - slide dari bawah */
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal {
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 92vh;
+    max-width: 100%;
+  }
+
+  /* Toast - naikkan sedikit */
+  #toast { bottom: 16px; right: 12px; left: 12px; max-width: none; text-align: center; }
+
+  /* Orders table → card layout */
+  .orders-table-wrap thead { display: none; }
+  .orders-table-wrap table { border-collapse: separate; border-spacing: 0 8px; }
+  .orders-table-wrap tbody tr {
+    display: block;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    box-shadow: var(--shadow-sm);
+  }
+  .orders-table-wrap tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 0;
+    border: none;
+    font-size: 13px;
+  }
+  .orders-table-wrap tbody td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    flex-shrink: 0;
+    margin-right: 12px;
+  }
+  .orders-table-wrap tbody td:first-child {
+    flex-direction: column;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--gray-100);
+    padding-bottom: 10px;
+    margin-bottom: 4px;
+  }
+  .orders-table-wrap tbody td:first-child::before { display: none; }
+  .orders-table-wrap tbody td:last-child { padding-top: 8px; border-top: 1px solid var(--gray-100); margin-top: 4px; }
+
+  /* Filter row orders */
+  .orders-filter-row { flex-direction: column; gap: 8px; }
+  .orders-filter-row select,
+  .orders-filter-row input { width: 100% !important; }
+
+  /* Pagination */
+  #pagination { flex-direction: column; gap: 8px; align-items: center; }
+
+  /* Sembunyikan kolom produk & CS di mobile (sudah ada di card) */
+  .hide-on-mobile { display: none !important; }
+}

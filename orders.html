@@ -6,6 +6,7 @@
 <title>Orders — OrderAdsy</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
 <div id="navbar" class="navbar"></div>
@@ -79,6 +80,40 @@
   let _dateFrom = null;
   let _dateTo   = null;
   let dateFilter;
+
+  // Reload saat tab aktif kembali
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') loadOrders(currentPage);
+  });
+
+  // Supabase Realtime
+  function initRealtime() {
+    const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    _sb.channel('orders-realtime')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        (payload) => {
+          // Cek CS filter — kalau CS login, hanya refresh kalau order miliknya
+          const csId = getCSId();
+          if (csId && payload.new?.cs_id !== csId) return;
+          // Kembali ke hal.1 kalau ada order baru, modal tidak terbuka
+          if (document.getElementById('detailModal').classList.contains('hidden')) {
+            loadOrders(1);
+            showToast('Order baru masuk!', 'success');
+          }
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        () => {
+          if (document.getElementById('detailModal').classList.contains('hidden')) {
+            loadOrders(currentPage);
+          }
+        }
+      )
+      .subscribe();
+  }
+  initRealtime();
 
   window.addEventListener('DOMContentLoaded', () => {
     dateFilter = new DateFilter(

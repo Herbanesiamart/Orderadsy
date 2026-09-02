@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
   @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
@@ -84,37 +85,85 @@
 
   let chart = null;
   let dateFilter;
+  let _currentFrom = null;
+  let _currentTo   = null;
+
+  // Reload saat tab aktif kembali
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      loadDashboard(_currentFrom, _currentTo);
+    }
+  });
 
   // Init DateFilter after DOM ready
   window.addEventListener('DOMContentLoaded', () => {
     dateFilter = new DateFilter(
       document.getElementById('dateFilterBtn'),
-      ({ from, to }) => loadDashboard(from, to)
+      ({ from, to }) => {
+        _currentFrom = from;
+        _currentTo   = to;
+        loadDashboard(from, to);
+      }
     );
   });
+
+  // Supabase Realtime — listen INSERT & UPDATE orders
+  function initRealtime() {
+    const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    _sb.channel('dashboard-orders')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        () => {
+          loadDashboard(_currentFrom, _currentTo);
+          showToast('Order baru masuk!', 'success');
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        () => loadDashboard(_currentFrom, _currentTo)
+      )
+      .subscribe();
+  }
+  initRealtime();
+
+  // Fast count query via Supabase Content-Range header
+  async function sbCount(table, filter = '') {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?select=id${filter}`, {
+      headers: { ...getSupabaseHeaders(), 'Prefer': 'count=exact', 'Range': '0-0' },
+    });
+    const cr = r.headers.get('Content-Range') || '';
+    return parseInt(cr.split('/')[1] || '0') || 0;
+  }
 
   async function loadDashboard(from, to) {
     const csFilter = getCSId() ? `&cs_id=eq.${getCSId()}` : '';
     try {
-      const params = [];
-      if (from && to) {
-        params.push(`created_at=gte.${from.toISOString()}`);
-        params.push(`created_at=lte.${to.toISOString()}`);
-      }
-      if (getCSId()) params.push(`cs_id=eq.${getCSId()}`);
-      params.push('select=id,status,created_at');
-      const orders = await sbGet('orders', '?' + params.join('&'));
+      const dateF = from && to
+        ? `&created_at=gte.${from.toISOString()}&created_at=lte.${to.toISOString()}`
+        : '';
+      const baseFilter = `${dateF}${csFilter}`;
 
-      const total   = orders.length;
-      const closing = orders.filter(o => o.status === 'closing').length;
-      const pending = orders.filter(o => o.status === 'pending').length;
-      const rate    = total > 0 ? Math.round(closing / total * 100) : 0;
+      // Parallel count queries — jauh lebih cepat dari fetch semua baris
+      const [total, closing, pending] = await Promise.all([
+        sbCount('orders', baseFilter),
+        sbCount('orders', `${baseFilter}&status=eq.closing`),
+        sbCount('orders', `${baseFilter}&status=eq.pending`),
+      ]);
 
+      const rate = total > 0 ? Math.round(closing / total * 100) : 0;
       document.getElementById('kpiOrders').textContent  = total.toLocaleString('id-ID');
       document.getElementById('kpiClosing').textContent = closing.toLocaleString('id-ID');
       document.getElementById('kpiRate').textContent    = rate + '%';
       document.getElementById('kpiPending').textContent = pending.toLocaleString('id-ID');
 
+      // Chart: fetch hanya created_at + status, limit 2000
+      const chartParams = [`select=status,created_at`, `limit=2000`];
+      if (from && to) {
+        chartParams.push(`created_at=gte.${from.toISOString()}`);
+        chartParams.push(`created_at=lte.${to.toISOString()}`);
+      }
+      if (getCSId()) chartParams.push(`cs_id=eq.${getCSId()}`);
+      const orders = await sbGet('orders', '?' + chartParams.join('&'));
       buildChart(orders, from, to);
     } catch(e) {
       console.error(e);

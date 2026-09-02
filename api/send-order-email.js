@@ -33,12 +33,12 @@ module.exports = async function handler(req, res) {
   const {
     to, cs_name, customer_name, customer_wa,
     customer_address, customer_city, customer_keluhan,
-    product_name, order_id, wa_message,
+    product_name, order_id, wa_message, order_number_today,
   } = req.body || {};
 
   if (!to) return res.status(400).json({ error: 'email to wajib' });
 
-  const subject = `Order Baru — ${product_name || 'Produk'}`;
+  const subject = `Order Baru${order_number_today ? ` #${order_number_today} Hari Ini` : ''} — ${product_name || 'Produk'}`;
 
   // Format HTML kompatibel dengan parseOrderEmail BotWA
   const html = `
@@ -51,7 +51,7 @@ module.exports = async function handler(req, res) {
     <div style="font-size:12px;opacity:0.8;margin-top:4px;">OrderAdsy</div>
   </div>
   <div style="border:1px solid #E5E7EB;border-top:none;border-radius:0 0 8px 8px;padding:20px;">
-    <p style="margin:0 0 16px;color:#374151;">Halo <strong>${cs_name || 'CS'}</strong>, ada order baru untuk kamu handle!</p>
+    <p style="margin:0 0 16px;color:#374151;">Halo <strong>${cs_name || 'CS'}</strong>, ada order baru untuk kamu handle!${order_number_today ? ` <span style="background:#EFF6FF;color:#2563EB;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700;">Order ke-${order_number_today} hari ini</span>` : ''}</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;">
       <tr>
         <td style="padding:8px 0;color:#6B7280;width:140px;">Nama</td>

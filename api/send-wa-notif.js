@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
   const {
     cs_wa, cs_name, customer_name, customer_wa,
     customer_address, customer_city, customer_keluhan,
-    product_name, order_id, wa_message,
+    product_name, order_id, wa_message, order_number_today,
   } = req.body || {};
 
   if (!cs_wa) return res.status(400).json({ error: 'cs_wa wajib' });
@@ -31,7 +31,7 @@ module.exports = async function handler(req, res) {
   const alamat = [customer_address, customer_city].filter(Boolean).join(', ') || '-';
 
   const message =
-`🔔 *Order Baru Masuk!*
+`🔔 *Order Baru Masuk!*${order_number_today ? ` _(ke-${order_number_today} hari ini)_` : ''}
 Halo ${cs_name || 'CS'}, ada order baru untuk kamu handle.
 
 📦 *Produk:* ${product_name || '-'}

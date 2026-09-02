@@ -422,7 +422,22 @@
         fbq('track', capiEvent, { value: product.price, currency: 'IDR' }, { eventID: eventId });
       }
 
-      // Email notif
+      // WA notif ke CS via Fonnte
+      if (cs?.wa_number) {
+        fetch(`${API_URL}/send-wa-notif`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cs_wa: cs.wa_number, cs_name: cs.name,
+            customer_name: customerName, customer_wa: normalizeWA(customerWA),
+            customer_address: customerAddress, customer_city: customerCity,
+            customer_keluhan: customerKeluhan,
+            product_name: product.name, order_id: orderId,
+          }),
+        }).catch(() => {});
+      }
+
+      // Email notif (backup)
       if (cs?.email) {
         fetch(`${API_URL}/send-order-email`, {
           method: 'POST',

@@ -190,15 +190,51 @@ function openNotifOrder(id) {
 function initNotifications() {
   _notifReadIds = _loadReadIds();
   fetchNotifications();
+
+  // Fallback polling 60 detik
   if (_notifInterval) clearInterval(_notifInterval);
   _notifInterval = setInterval(fetchNotifications, 60000);
 
   // prevent notif panel clicks from closing
-  document.addEventListener('click', function() {}, false);
   const panel = document.getElementById('notifWrapper');
-  if (panel) {
-    panel.addEventListener('click', e => e.stopPropagation());
+  if (panel) panel.addEventListener('click', e => e.stopPropagation());
+
+  // Supabase Realtime — load CDN jika belum ada, lalu subscribe
+  _initNotifRealtime();
+}
+
+function _initNotifRealtime() {
+  if (typeof supabase !== 'undefined') {
+    _subscribeNotifRealtime();
+    return;
   }
+  // Load CDN dinamis kalau belum ada
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js';
+  s.onload = _subscribeNotifRealtime;
+  document.head.appendChild(s);
+}
+
+function _subscribeNotifRealtime() {
+  try {
+    const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    _sb.channel('notif-orders')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        (payload) => {
+          // CS filter — skip kalau bukan ordernya
+          const csId = (typeof getCSId === 'function') ? getCSId() : null;
+          if (csId && payload.new?.cs_id !== csId) return;
+
+          fetchNotifications();
+          if (typeof playOrderSound === 'function') playOrderSound();
+        }
+      )
+      .subscribe();
+
+    // Realtime aktif — matikan polling fallback
+    if (_notifInterval) { clearInterval(_notifInterval); _notifInterval = null; }
+  } catch(e) {}
 }
 
 function logout() {

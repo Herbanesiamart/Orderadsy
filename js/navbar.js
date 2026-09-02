@@ -95,7 +95,7 @@ function renderNotifList() {
   el.innerHTML = _notifData.map(o => {
     const isRead = _notifReadIds.has(o.id);
     return `
-      <div class="notif-item ${isRead ? 'read' : ''}" data-id="${o.id}">
+      <div class="notif-item ${isRead ? 'read' : ''}" data-id="${o.id}" onclick="openNotifOrder('${o.id}')">
         <div class="notif-icon">🛒</div>
         <div class="notif-content">
           <div class="notif-title">Pesanan Baru</div>
@@ -139,6 +139,25 @@ function markAllRead() {
   _saveReadIds();
   renderNotifList();
   updateNotifBadge();
+}
+
+function openNotifOrder(id) {
+  // Mark as read
+  _notifReadIds.add(id);
+  _saveReadIds();
+  updateNotifBadge();
+  closeNotif();
+
+  // If already on orders page, open detail directly
+  if (window.location.pathname.endsWith('orders.html')) {
+    if (typeof openDetail === 'function') {
+      // Try to find in allOrders first, else navigate with param
+      const found = (typeof allOrders !== 'undefined') && allOrders.find(o => o.id === id);
+      if (found) { openDetail(id); return; }
+    }
+  }
+  // Navigate to orders page with order id param
+  window.location.href = `orders.html?open=${id}`;
 }
 
 function initNotifications() {

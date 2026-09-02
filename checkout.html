@@ -379,34 +379,40 @@
     const cs = assignedCS.length > 0 ? assignedCS[rotatorIndex % assignedCS.length] : null;
 
     try {
-      // 1. Save order — satu-satunya yang di-await
-      const orderRes = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
-        method: 'POST',
-        headers: { ...sbH, 'Prefer': 'return=representation' },
-        body: JSON.stringify({
-          checkout_page_id: checkoutPage.id,
-          product_id:       product.id,
-          cs_id:            cs?.id || null,
-          customer_name:    customerName,
-          customer_wa:      normalizeWA(customerWA),
-          customer_email:   customerEmail || null,
-          customer_address: customerAddress || null,
-          customer_city:    customerCity || null,
-          customer_note:    customerNote || null,
-          customer_keluhan: customerKeluhan || null,
-          status:           'pending',
-        }),
-      });
-      const orderData = await orderRes.json();
-      const orderId = orderData[0]?.id;
-
-      // Hitung order hari ini (WIB = UTC+7)
+      // Hitung midnight WIB untuk count query
       const WIB_OFFSET = 7 * 60 * 60 * 1000;
       const nowWIB = new Date(Date.now() + WIB_OFFSET);
-      nowWIB.setUTCHours(0, 0, 0, 0); // midnight WIB
-      const todayStartUTC = new Date(nowWIB.getTime() - WIB_OFFSET); // konversi balik ke UTC
-      const todayOrders = await sbGet('orders', `?product_id=eq.${product.id}&created_at=gte.${todayStartUTC.toISOString()}&select=id`).catch(() => []);
-      const orderNumberToday = todayOrders.length;
+      nowWIB.setUTCHours(0, 0, 0, 0);
+      const todayStartUTC = new Date(nowWIB.getTime() - WIB_OFFSET).toISOString();
+
+      // Save order + count hari ini paralel — hemat 1 round-trip
+      const [orderRes, countRes] = await Promise.all([
+        fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+          method: 'POST',
+          headers: { ...sbH, 'Prefer': 'return=representation' },
+          body: JSON.stringify({
+            checkout_page_id: checkoutPage.id,
+            product_id:       product.id,
+            cs_id:            cs?.id || null,
+            customer_name:    customerName,
+            customer_wa:      normalizeWA(customerWA),
+            customer_email:   customerEmail || null,
+            customer_address: customerAddress || null,
+            customer_city:    customerCity || null,
+            customer_note:    customerNote || null,
+            customer_keluhan: customerKeluhan || null,
+            status:           'pending',
+          }),
+        }),
+        fetch(`${SUPABASE_URL}/rest/v1/orders?product_id=eq.${product.id}&created_at=gte.${todayStartUTC}&select=id`, {
+          headers: { ...sbH, 'Prefer': 'count=exact', 'Range': '0-0' },
+        }).catch(() => null),
+      ]);
+
+      const orderData = await orderRes.json();
+      const orderId = orderData[0]?.id;
+      const cr = countRes?.headers?.get('Content-Range') || '';
+      const orderNumberToday = parseInt(cr.split('/')[1] || '1') || 1;
 
       // 2-5. Semua background tasks — fire and forget, tidak perlu ditunggu
       const capiEvent = checkoutPage.pixel_event || 'Lead';

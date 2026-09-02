@@ -86,7 +86,7 @@
     if (getCSId()) filter += `cs_id=eq.${getCSId()}&`;
 
     const countQ = `?${filter}select=id`;
-    const dataQ  = `?${filter}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,products(name),cs_team(name,wa_number)`;
+    const dataQ  = `?${filter}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,products(name,followup_welcome),cs_team(name,wa_number)`;
 
     try {
       document.getElementById('ordersTable').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--gray-400);">Loading...</td></tr>`;
@@ -151,7 +151,7 @@
           </select>
         </td>
         <td data-label="" onclick="event.stopPropagation()">
-          <button class="btn btn-outline btn-sm" onclick="openWADirect('${o.customer_wa}','${(o.customer_name||'').replace(/'/g,"\\'")}')">💬 WA</button>
+          <button class="btn btn-outline btn-sm" onclick="openWADirect('${o.customer_wa}','${o.id}')">💬 WA</button>
         </td>
       </tr>`).join('');
   }
@@ -223,12 +223,28 @@
 
   function openWA() {
     if (!currentOrder) return;
-    openWADirect(currentOrder.customer_wa, currentOrder.customer_name);
+    openWADirect(currentOrder.customer_wa, currentOrder.id);
   }
 
-  function openWADirect(wa, name) {
+  function openWADirect(wa, orderId) {
     const n = normalizeWA(wa);
-    window.open(`https://wa.me/${n}`, '_blank');
+    if (!n || n === '62') { showToast('No. WhatsApp tidak tersedia', 'error'); return; }
+
+    const o = allOrders.find(o => o.id === orderId);
+    let msg = '';
+    if (o) {
+      const template = o.products?.followup_welcome ||
+        'Halo Kak {{name}}, saya {{cs_name}}. Terima kasih sudah order ya kak!\n\nNama     : {{name}}\nNo. WA   : {{phone}}\nAlamat   : {{address}}\n\nSudah benar ya kak? 😊';
+      msg = template
+        .replace(/\{\{name\}\}/gi,    o.customer_name || '')
+        .replace(/\{\{cs_name\}\}/gi, o.cs_team?.name || '')
+        .replace(/\{\{phone\}\}/gi,   o.customer_wa || '')
+        .replace(/\{\{address\}\}/gi, [o.customer_address, o.customer_city].filter(Boolean).join(', '))
+        .replace(/\{\{product\}\}/gi, o.products?.name || '');
+    }
+
+    const url = `https://wa.me/${n}${msg ? '?text=' + encodeURIComponent(msg) : ''}`;
+    window.open(url, '_blank');
   }
 
   loadOrders(1);

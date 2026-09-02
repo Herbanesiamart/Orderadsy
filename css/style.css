@@ -708,3 +708,267 @@ select.form-control { cursor: pointer; }
   /* Sembunyikan kolom produk & CS di mobile (sudah ada di card) */
   .hide-on-mobile { display: none !important; }
 }
+
+/* ═══════════════════════════════════════════════════
+   DateFilter — df-* component styles
+   ═══════════════════════════════════════════════════ */
+
+/* Trigger button */
+.date-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-700);
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.date-filter-btn:hover { background: var(--gray-50); }
+
+/* Dropdown container */
+.df-dropdown {
+  position: absolute;
+  z-index: 9999;
+  display: none;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+  overflow: hidden;
+  width: 720px;
+}
+.df-dropdown.open { display: block; }
+
+/* Inner flex layout */
+.df-inner {
+  display: flex;
+  min-height: 340px;
+}
+
+/* Sidebar */
+.df-sidebar {
+  width: 158px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--gray-100);
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--gray-50);
+}
+
+.df-preset {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--gray-700);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  font-weight: 500;
+}
+.df-preset:hover { background: var(--gray-200); }
+.df-preset.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* Main panel */
+.df-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Calendars row */
+.df-calendars {
+  display: flex;
+  gap: 0;
+  flex: 1;
+  padding: 16px 12px 8px;
+}
+
+.df-cal {
+  flex: 1;
+  min-width: 0;
+}
+.df-cal + .df-cal {
+  border-left: 1px solid var(--gray-100);
+  padding-left: 16px;
+  margin-left: 8px;
+}
+
+/* Calendar header */
+.df-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.df-cal-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+.df-nav {
+  background: none;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--gray-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.12s;
+}
+.df-nav:hover { background: var(--gray-100); }
+
+/* Day grid */
+.df-grid { width: 100%; }
+
+.df-day-names {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 4px;
+}
+.df-day-name {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-400);
+  padding: 2px 0;
+}
+.df-day-name.weekend { color: var(--red); }
+
+.df-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+}
+
+.df-day {
+  position: relative;
+  text-align: center;
+  font-size: 12px;
+  padding: 5px 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  color: var(--gray-800);
+  transition: background 0.1s;
+  user-select: none;
+  z-index: 0;
+}
+.df-day.empty { cursor: default; }
+
+.df-day:not(.empty):hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.df-day.weekend { color: var(--red); }
+
+/* Today ring */
+.df-day.today::after {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  border: 1.5px solid var(--primary);
+  border-radius: 4px;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* In-range background */
+.df-day.in-range {
+  background: #DBEAFE;
+  color: var(--primary);
+  border-radius: 0;
+}
+.df-day.in-range.weekend { color: #b91c1c; }
+
+/* Range start & end — dark blue filled circle */
+.df-day.range-start,
+.df-day.range-end {
+  background: var(--primary) !important;
+  color: #fff !important;
+  border-radius: 50%;
+  font-weight: 700;
+  z-index: 1;
+}
+.df-day.range-start.weekend,
+.df-day.range-end.weekend { color: #fff !important; }
+
+/* Extend in-range background under start/end */
+.df-day.range-start::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; right: -1px;
+  width: 50%;
+  background: #DBEAFE;
+  z-index: -1;
+}
+.df-day.range-end::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: -1px;
+  width: 50%;
+  background: #DBEAFE;
+  z-index: -1;
+}
+/* When start === end, no half-extend */
+.df-day.range-start.range-end::before { display: none; }
+
+/* Footer */
+.df-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 16px 14px;
+  border-top: 1px solid var(--gray-100);
+}
+
+.df-btn-cancel {
+  padding: 7px 18px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--gray-700);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.df-btn-cancel:hover { background: var(--gray-100); }
+
+.df-btn-apply {
+  padding: 7px 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.df-btn-apply:hover { background: #1d4ed8; }
+
+/* Mobile: stack calendars */
+@media (max-width: 760px) {
+  .df-dropdown { width: calc(100vw - 16px); left: 8px !important; }
+  .df-inner { flex-direction: column; }
+  .df-sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--gray-100); }
+  .df-preset { flex: 1 1 auto; text-align: center; }
+  .df-calendars { flex-direction: column; }
+  .df-cal + .df-cal { border-left: none; border-top: 1px solid var(--gray-100); padding-left: 0; margin-left: 0; margin-top: 12px; padding-top: 12px; }
+}

@@ -9,21 +9,25 @@ function renderNavbar(activePage) {
   const nav = document.getElementById('navbar');
   if (!nav) return;
 
+  const admin = isAdmin();
+  const csName = getCSName();
+
   nav.innerHTML = `
     <a href="dashboard.html" class="navbar-brand">Order<span>Adsy</span></a>
     <nav class="navbar-nav">
       <a href="dashboard.html" class="nav-link ${activePage==='dashboard'?'active':''}">Dashboard</a>
-      <a href="products.html"  class="nav-link ${activePage==='products'?'active':''}">Products</a>
-      <a href="orders.html"    class="nav-link ${activePage==='orders'?'active':''}">Orders</a>
+      ${admin ? `<a href="products.html" class="nav-link ${activePage==='products'?'active':''}">Products</a>` : ''}
+      <a href="orders.html" class="nav-link ${activePage==='orders'?'active':''}">Orders</a>
+      ${admin ? `
       <div class="nav-dropdown" id="navDropdown">
         <button class="nav-link ${activePage==='others'?'active':''}" onclick="toggleNavDropdown(event)">Others ▾</button>
         <div class="nav-dropdown-menu">
           <a href="others-cs.html" class="nav-dropdown-item">👥 CS Team</a>
         </div>
-      </div>
+      </div>` : ''}
     </nav>
     <div class="navbar-right">
-      <a href="products-add.html" class="btn-add-product">＋ Add Product</a>
+      ${admin ? `<a href="products-add.html" class="btn-add-product">＋ Add Product</a>` : `<span style="font-size:13px;color:var(--gray-500);font-weight:500;">👤 ${csName || 'CS'}</span>`}
       <button class="icon-btn" title="Logout" onclick="logout()">⏻</button>
     </div>
   `;

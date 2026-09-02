@@ -44,12 +44,21 @@ async function sbDelete(table, query) {
   if (!r.ok) throw new Error(await r.text());
 }
 
-function isLoggedIn() {
-  return sessionStorage.getItem('oa_auth') === 'true';
+function getAuthData() {
+  try { return JSON.parse(sessionStorage.getItem('oa_auth')); } catch { return null; }
 }
+
+function isLoggedIn() { return !!getAuthData(); }
+function isAdmin()    { return getAuthData()?.role === 'admin'; }
+function getCSId()    { return getAuthData()?.cs_id || null; }
+function getCSName()  { return getAuthData()?.cs_name || null; }
 
 function requireAuth() {
   if (!isLoggedIn()) window.location.href = 'login.html';
+}
+
+function requireAdmin() {
+  if (!isAdmin()) window.location.href = 'dashboard.html';
 }
 
 function normalizeWA(hp) {

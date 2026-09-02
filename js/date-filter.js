@@ -4,7 +4,7 @@
  * Callback receives: { from: Date, to: Date, label: String }
  */
 class DateFilter {
-  constructor(triggerEl, callback) {
+  constructor(triggerEl, callback, defaultPreset = 'Last 30 Days') {
     this.trigger   = triggerEl;
     this.callback  = callback;
     this.isOpen    = false;
@@ -30,22 +30,36 @@ class DateFilter {
     this.WEEKENDS = [5, 6]; // index 5=Sab, 6=Min (0=Mon baseline)
 
     this.presets = [
-      { label: 'Kemarin',       fn: () => this._preset(-1, -1) },
+      { label: 'Semua',         fn: () => this._presetAll() },
       { label: 'Hari Ini',      fn: () => this._preset(0, 0) },
+      { label: 'Kemarin',       fn: () => this._preset(-1, -1) },
       { label: 'Bulan Ini',     fn: () => this._presetMonthThis() },
       { label: 'Bulan Lalu',    fn: () => this._presetMonthLast() },
       { label: 'Last 7 Days',   fn: () => this._preset(-6, 0) },
       { label: 'Last 30 Days',  fn: () => this._preset(-29, 0) },
       { label: 'Last 90 Days',  fn: () => this._preset(-89, 0) },
     ];
-    this.activePreset = 'Last 30 Days';
+
+    // Default bisa di-set dari luar, fallback 'Last 30 Days'
+    this.activePreset = defaultPreset || 'Last 30 Days';
 
     this._buildDropdown();
     this._bindTrigger();
 
-    // Apply default: Last 30 Days
-    const def = this.presets.find(p => p.label === 'Last 30 Days');
+    // Apply default & langsung fire callback
+    const def = this.presets.find(p => p.label === this.activePreset);
     if (def) def.fn();
+    this._applyDefault();
+  }
+
+  _applyDefault() {
+    const from = this.rangeStart ? new Date(this.rangeStart) : null;
+    const to   = this.rangeEnd   ? new Date(this.rangeEnd)   : null;
+    if (from) from.setHours(0, 0, 0, 0);
+    if (to)   to.setHours(23, 59, 59, 999);
+    const labelEl = this.trigger.querySelector('.df-label');
+    if (labelEl) labelEl.textContent = this.activePreset;
+    if (this.callback) this.callback({ from, to, label: this.activePreset });
   }
 
   /* ── Preset helpers ─────────────────────────────────────────── */
@@ -53,6 +67,13 @@ class DateFilter {
     const d = new Date(this._today);
     d.setDate(d.getDate() + offset);
     return d;
+  }
+
+  _presetAll() {
+    this.rangeStart = null;
+    this.rangeEnd   = null;
+    this.selecting  = false;
+    this.hoverDate  = null;
   }
 
   _preset(startOffset, endOffset) {
@@ -305,9 +326,17 @@ class DateFilter {
 
   /* ── Apply ──────────────────────────────────────────────────── */
   _apply() {
+    // Preset "Semua" — rangeStart & rangeEnd null
+    if (!this.rangeStart && !this.rangeEnd && this.activePreset === 'Semua') {
+      const labelEl = this.trigger.querySelector('.df-label');
+      if (labelEl) labelEl.textContent = 'Semua';
+      this.close();
+      if (this.callback) this.callback({ from: null, to: null, label: 'Semua' });
+      return;
+    }
+
     if (!this.rangeStart || !this.rangeEnd) {
       if (this.rangeStart && !this.rangeEnd) {
-        // Single day selection
         this.rangeEnd = new Date(this.rangeStart);
       } else {
         return;

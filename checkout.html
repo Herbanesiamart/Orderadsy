@@ -424,6 +424,14 @@
 
       // WA notif ke CS via Fonnte
       if (cs?.wa_number) {
+        const welcomeTemplate = product.followup_welcome || 'Halo Kak {{name}}, saya {{cs_name}}. Terima kasih sudah order ya kak!\n\nNama     : {{name}}\nNo. WA   : {{phone}}\nAlamat   : {{address}}\n\nSudah benar ya kak? 😊';
+        const waMessage = welcomeTemplate
+          .replace(/\{\{name\}\}/gi,    customerName)
+          .replace(/\{\{cs_name\}\}/gi, cs.name)
+          .replace(/\{\{phone\}\}/gi,   normalizeWA(customerWA))
+          .replace(/\{\{address\}\}/gi, [customerAddress, customerCity].filter(Boolean).join(', '))
+          .replace(/\{\{product\}\}/gi, product.name);
+
         fetch(`${API_URL}/send-wa-notif`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -433,12 +441,21 @@
             customer_address: customerAddress, customer_city: customerCity,
             customer_keluhan: customerKeluhan,
             product_name: product.name, order_id: orderId,
+            wa_message: waMessage,
           }),
         }).catch(() => {});
       }
 
       // Email notif (backup)
       if (cs?.email) {
+        const welcomeTemplate = product.followup_welcome || 'Halo Kak {{name}}, saya {{cs_name}}. Terima kasih sudah order ya kak!\n\nNama     : {{name}}\nNo. WA   : {{phone}}\nAlamat   : {{address}}\n\nSudah benar ya kak? 😊';
+        const waMessage = welcomeTemplate
+          .replace(/\{\{name\}\}/gi,    customerName)
+          .replace(/\{\{cs_name\}\}/gi, cs.name)
+          .replace(/\{\{phone\}\}/gi,   normalizeWA(customerWA))
+          .replace(/\{\{address\}\}/gi, [customerAddress, customerCity].filter(Boolean).join(', '))
+          .replace(/\{\{product\}\}/gi, product.name);
+
         fetch(`${API_URL}/send-order-email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -448,6 +465,7 @@
             customer_address: customerAddress, customer_city: customerCity,
             customer_keluhan: customerKeluhan,
             product_name: product.name, order_id: orderId,
+            wa_message: waMessage,
           }),
         }).catch(() => {});
       }

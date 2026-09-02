@@ -27,11 +27,11 @@
       <p>Order Management System</p>
     </div>
     <div class="login-title">Masuk ke Dashboard</div>
-    <div class="error-msg" id="errorMsg">Username atau password salah.</div>
+    <div class="error-msg" id="errorMsg">Email/username atau password salah.</div>
     <form id="loginForm">
       <div class="form-group">
-        <label class="form-label">Username</label>
-        <input type="text" class="form-control" id="username" placeholder="Username" autocomplete="username">
+        <label class="form-label">Email / Username</label>
+        <input type="text" class="form-control" id="username" placeholder="Email atau username admin" autocomplete="username">
       </div>
       <div class="form-group">
         <label class="form-label">Password</label>
@@ -47,16 +47,37 @@
 <script>
   if (isLoggedIn()) window.location.href = 'dashboard.html';
 
-  document.getElementById('loginForm').addEventListener('submit', function(e) {
+  document.getElementById('loginForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const u = document.getElementById('username').value.trim();
     const p = document.getElementById('password').value;
+    const errEl = document.getElementById('errorMsg');
+    const btn = e.target.querySelector('button[type=submit]');
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Memproses...';
+
+    // Coba login admin dulu
     if (u === ADMIN_USER && p === ADMIN_PASS) {
-      sessionStorage.setItem('oa_auth', 'true');
+      sessionStorage.setItem('oa_auth', JSON.stringify({ role: 'admin' }));
       window.location.href = 'dashboard.html';
-    } else {
-      document.getElementById('errorMsg').style.display = 'block';
+      return;
     }
+
+    // Coba login CS pakai email + password
+    try {
+      const res = await sbGet('cs_team', `?email=eq.${encodeURIComponent(u)}&select=id,name,email,password,is_active`);
+      const cs = res[0];
+      if (cs && cs.password === p && cs.is_active) {
+        sessionStorage.setItem('oa_auth', JSON.stringify({ role: 'cs', cs_id: cs.id, cs_name: cs.name }));
+        window.location.href = 'dashboard.html';
+        return;
+      }
+    } catch(err) { /* lanjut ke error */ }
+
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Masuk';
   });
 </script>
 </body>

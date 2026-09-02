@@ -151,9 +151,10 @@
   }
 
   async function loadDashboard() {
+    const csFilter = getCSId() ? `&cs_id=eq.${getCSId()}` : '';
     try {
       const since = new Date(Date.now() - filterDays * 86400000).toISOString();
-      const orders = await sbGet('orders', `?created_at=gte.${since}&select=id,status,created_at`);
+      const orders = await sbGet('orders', `?created_at=gte.${since}${csFilter}&select=id,status,created_at`);
 
       const total   = orders.length;
       const closing = orders.filter(o => o.status === 'closing').length;
@@ -171,7 +172,7 @@
     }
 
     try {
-      const recent = await sbGet('orders', `?select=id,customer_name,status,created_at,product_id,products(name)&order=created_at.desc&limit=8`);
+      const recent = await sbGet('orders', `?select=id,customer_name,status,created_at,product_id,products(name)&order=created_at.desc&limit=8${csFilter}`);
       renderRecent(recent);
     } catch(e) {}
   }

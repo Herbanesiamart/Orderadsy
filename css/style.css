@@ -106,7 +106,7 @@ body {
   display: none;
   z-index: 200;
 }
-.nav-dropdown:hover .nav-dropdown-menu { display: block; }
+.nav-dropdown.open .nav-dropdown-menu { display: block; }
 .nav-dropdown-item {
   display: block;
   padding: 8px 12px;

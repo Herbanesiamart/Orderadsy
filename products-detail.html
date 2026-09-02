@@ -96,12 +96,9 @@
     <!-- Checkout pages table -->
     <div class="card">
       <div class="card-body" style="border-bottom:1px solid var(--gray-200);">
-        <div class="flex items-center justify-between flex-wrap gap-8">
+        <div class="flex items-center justify-between">
           <div class="section-title">Checkout Pages</div>
-          <div class="flex gap-8">
-            <button class="btn btn-outline" onclick="openEmbedModal()">&#60;/&#62; Embed Form</button>
-            <button class="btn btn-primary" onclick="createCheckoutPage()">＋ Create Checkout Page</button>
-          </div>
+          <button class="btn btn-primary" onclick="createCheckoutPage()">＋ Create Checkout Page</button>
         </div>
       </div>
       <div class="table-wrap">
@@ -243,29 +240,25 @@
 <div class="modal-overlay hidden" id="embedModal">
   <div class="modal" style="max-width:600px;">
     <div class="modal-header">
-      <div class="modal-title">&#60;/&#62; Embed Checkout Form</div>
+      <div class="modal-title" id="embedModalTitle">&#60;/&#62; Embed Form</div>
       <button class="modal-close" onclick="closeEmbedModal()">✕</button>
     </div>
     <div class="modal-body">
       <div style="font-size:13px;color:var(--gray-600);margin-bottom:16px;">
-        Copy kode HTML di bawah ini dan paste ke landing page kamu. Form akan tampil langsung di halaman tersebut.
+        Copy kode di bawah dan paste ke landing page kamu. Form akan tampil langsung di halaman.
       </div>
 
-      <!-- Pilih checkout page -->
-      <div class="form-group">
-        <label class="form-label">Pilih Checkout Page</label>
-        <select class="form-control" id="embedPageSelect" onchange="updateEmbedCode()"></select>
-      </div>
-
-      <!-- Pilih tipe embed -->
+      <!-- Tipe embed -->
       <div class="form-group">
         <label class="form-label">Tipe Embed</label>
-        <div class="flex gap-8">
+        <div class="flex gap-8 flex-wrap">
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-            <input type="radio" name="embedType" value="iframe" checked onchange="updateEmbedCode()"> iframe (paling mudah)
+            <input type="radio" name="embedType" value="inline" checked onchange="updateEmbedCode()">
+            Inline (form langsung muncul)
           </label>
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-            <input type="radio" name="embedType" value="popup" onchange="updateEmbedCode()"> Popup / Modal
+            <input type="radio" name="embedType" value="popup" onchange="updateEmbedCode()">
+            Popup (tombol → modal)
           </label>
         </div>
       </div>
@@ -273,7 +266,7 @@
       <!-- Kode embed -->
       <div class="form-group">
         <label class="form-label">Kode HTML</label>
-        <textarea class="form-control" id="embedCode" style="min-height:140px;font-family:monospace;font-size:12px;" readonly onclick="this.select()"></textarea>
+        <textarea class="form-control" id="embedCode" style="min-height:160px;font-family:monospace;font-size:11.5px;line-height:1.5;" readonly onclick="this.select()"></textarea>
       </div>
 
       <button class="btn btn-primary" onclick="copyEmbed()">📋 Copy Kode</button>
@@ -281,8 +274,7 @@
 
       <hr class="divider">
       <div style="font-size:12px;color:var(--gray-400);">
-        💡 <strong>Tips:</strong> Untuk landing page HTML biasa, paste kode iframe langsung di tempat kamu ingin form muncul.
-        Untuk WordPress/Elementor, gunakan blok "Custom HTML" dan paste kode di sana.
+        💡 <strong>Tips:</strong> Paste ke bagian HTML landing page kamu, atau pakai blok <strong>Custom HTML</strong> di WordPress/Elementor/PageFly.
       </div>
     </div>
     <div class="modal-footer">
@@ -353,17 +345,19 @@
       const rate = pgOrders.length > 0 ? Math.round(pgClosing/pgOrders.length*100) : 0;
       return `
         <tr>
-          <td><a href="checkout-builder.html?id=${p.id}" style="color:var(--primary);font-weight:600;">${p.name}</a></td>
-          <td>${pgOrders.length}</td>
-          <td>${pgOrders.length}</td>
-          <td>${rate}%</td>
           <td>
-            <div class="flex gap-8">
-              <a href="checkout-builder.html?id=${p.id}" class="btn btn-outline btn-sm">Edit</a>
-              <a href="checkout.html?slug=${product.slug}&page=${p.id}" target="_blank" class="btn btn-outline btn-sm">View</a>
-              <button class="btn btn-outline btn-sm" onclick="deleteCheckoutPage('${p.id}','${p.name}')">Hapus</button>
+            <div style="font-weight:600;color:var(--primary);">${p.name}</div>
+            <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap;">
+              <a href="checkout-builder.html?id=${p.id}" style="font-size:12px;color:var(--primary);">✏️ Edit</a>
+              <a href="checkout.html?slug=${product.slug}&page=${p.id}" target="_blank" style="font-size:12px;color:var(--primary);">👁 View</a>
+              <button onclick="openEmbedModal('${p.id}','${p.name}')" style="font-size:12px;color:var(--primary);background:none;border:none;cursor:pointer;padding:0;">&lt;/&gt; Embed</button>
+              <button onclick="deleteCheckoutPage('${p.id}','${p.name.replace(/'/g,"\\'")}')" style="font-size:12px;color:var(--red);background:none;border:none;cursor:pointer;padding:0;">🗑 Hapus</button>
             </div>
           </td>
+          <td>${pgOrders.length}</td>
+          <td>${pgClosing}</td>
+          <td>${rate}%</td>
+          <td></td>
         </tr>`;
     }).join('');
   }
@@ -498,13 +492,13 @@
 
   // ── Embed modal ──
   let checkoutPages = [];
+  let embedCurrentPageId   = '';
+  let embedCurrentPageName = '';
 
-  function openEmbedModal() {
-    // populate select
-    const sel = document.getElementById('embedPageSelect');
-    sel.innerHTML = checkoutPages.length
-      ? checkoutPages.map(p => `<option value="${p.id}">${p.name}</option>`).join('')
-      : '<option value="">Belum ada checkout page</option>';
+  function openEmbedModal(pageId, pageName) {
+    embedCurrentPageId   = pageId;
+    embedCurrentPageName = pageName;
+    document.getElementById('embedModalTitle').textContent = `</> Embed — ${pageName}`;
     updateEmbedCode();
     document.getElementById('embedModal').classList.remove('hidden');
   }
@@ -512,44 +506,63 @@
   function closeEmbedModal() { document.getElementById('embedModal').classList.add('hidden'); }
 
   function updateEmbedCode() {
-    const pageId = document.getElementById('embedPageSelect').value;
-    const type   = document.querySelector('input[name="embedType"]:checked')?.value || 'iframe';
-    const slug   = product?.slug || '';
+    const type    = document.querySelector('input[name="embedType"]:checked')?.value || 'inline';
+    const slug    = product?.slug || '';
+    const pageId  = embedCurrentPageId;
     const baseUrl = 'https://orderadsy.vercel.app';
     const formUrl = `${baseUrl}/checkout.html?slug=${slug}&page=${pageId}`;
+    const divId   = `oa-form-${pageId.slice(0,8)}`;
 
     let code = '';
-    if (type === 'iframe') {
-      code = `<!-- OrderAdsy Embed Form -->
-<iframe
-  src="${formUrl}"
-  width="100%"
-  height="700"
-  frameborder="0"
-  scrolling="no"
-  style="border:none;width:100%;max-width:520px;display:block;margin:0 auto;">
-</iframe>`;
+
+    if (type === 'inline') {
+      code =
+`<!-- OrderAdsy Embed Form -->
+<div id="${divId}"></div>
+<script>
+(function() {
+  var el = document.getElementById('${divId}');
+  var iframe = document.createElement('iframe');
+  iframe.src = '${formUrl}';
+  iframe.id  = 'oa-iframe-${pageId.slice(0,8)}';
+  iframe.setAttribute('frameborder','0');
+  iframe.setAttribute('scrolling','no');
+  iframe.style.cssText = 'width:100%;border:none;min-height:480px;display:block;';
+  el.appendChild(iframe);
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'oa-resize' && e.data.id === '${pageId.slice(0,8)}') {
+      iframe.style.height = (e.data.height + 40) + 'px';
+    }
+  });
+})();
+<\/script>
+<!-- End OrderAdsy Embed Form -->`;
+
     } else {
-      code = `<!-- OrderAdsy Popup Form -->
-<button onclick="document.getElementById('oaModal').style.display='flex'"
-  style="background:#F59E0B;color:#fff;padding:14px 28px;border:none;
+      const btnColor = '#F59E0B';
+      code =
+`<!-- OrderAdsy Popup Form -->
+<button onclick="document.getElementById('oaModal-${pageId.slice(0,8)}').style.display='flex'"
+  style="background:${btnColor};color:#fff;padding:14px 28px;border:none;
          border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;">
   Pesan Sekarang
 </button>
 
-<div id="oaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);
-     z-index:9999;align-items:center;justify-content:center;padding:16px;"
-     onclick="if(event.target===this)this.style.display='none'">
+<div id="oaModal-${pageId.slice(0,8)}"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);
+         z-index:9999;align-items:center;justify-content:center;padding:16px;"
+  onclick="if(event.target===this)this.style.display='none'">
   <div style="background:#fff;border-radius:12px;overflow:hidden;
-              width:100%;max-width:480px;max-height:90vh;position:relative;">
-    <button onclick="document.getElementById('oaModal').style.display='none'"
-      style="position:absolute;top:10px;right:12px;background:rgba(0,0,0,0.15);
+              width:100%;max-width:480px;max-height:90vh;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <button onclick="document.getElementById('oaModal-${pageId.slice(0,8)}').style.display='none'"
+      style="position:absolute;top:10px;right:12px;background:rgba(0,0,0,0.12);
              border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;
-             font-size:16px;color:#333;z-index:1;">✕</button>
-    <iframe src="${formUrl}" width="100%" height="600"
+             font-size:16px;color:#374151;z-index:1;line-height:1;">✕</button>
+    <iframe src="${formUrl}" width="100%" height="560"
             frameborder="0" style="border:none;display:block;"></iframe>
   </div>
-</div>`;
+</div>
+<!-- End OrderAdsy Popup Form -->`;
     }
 
     document.getElementById('embedCode').value = code;

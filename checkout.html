@@ -482,6 +482,19 @@
     }
   }
 
+  // Auto-resize iframe height
+  function notifyParentHeight() {
+    const h = document.body.scrollHeight;
+    const id = (pageIdParam || '').slice(0, 8);
+    try {
+      window.parent.postMessage({ type: 'oa-resize', id, height: h }, '*');
+    } catch(e) {}
+  }
+  // Observe height changes
+  if (window.ResizeObserver) {
+    new ResizeObserver(notifyParentHeight).observe(document.body);
+  }
+
   // Show loading spinner initially
   document.getElementById('loadingOverlay').style.display = 'flex';
   init();

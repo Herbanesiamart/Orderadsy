@@ -110,7 +110,7 @@
     if (_dateTo)   filter += `created_at=lte.${_dateTo.toISOString()}&`;
 
     const countQ = `?${filter}select=id`;
-    const dataQ  = `?${filter}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,products(name,followup_welcome),cs_team(name,wa_number)`;
+    const dataQ  = `?${filter}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,products(name,followup_welcome),cs_team(name,wa_number),checkout_pages(fields_config)`;
 
     try {
       document.getElementById('ordersTable').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--gray-400);">Loading...</td></tr>`;
@@ -232,25 +232,68 @@
     }
   }
 
+  // Map field key → { label, value getter }
+  const DETAIL_FIELD_MAP = {
+    nama:    { label: 'Customer',           get: o => o.customer_name },
+    wa:      { label: 'No. WhatsApp',       get: o => o.customer_wa },
+    email:   { label: 'Email',              get: o => o.customer_email },
+    alamat:  { label: 'Alamat',             get: o => o.customer_address },
+    kota:    { label: 'Kota / Kecamatan',   get: o => o.customer_city },
+    keluhan: { label: 'Keluhan',            get: o => o.customer_keluhan },
+    catatan: { label: 'Catatan',            get: o => o.customer_note },
+  };
+
+  function _detailRow(label, value) {
+    if (!value) return '';
+    return `<div>
+      <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">${label}</div>
+      <div style="font-size:14px;">${value}</div>
+    </div>`;
+  }
+
   function openDetail(id) {
     currentOrder = allOrders.find(o => o.id === id);
     if (!currentOrder) return;
     const o = currentOrder;
+
+    // Get enabled fields from checkout_pages.fields_config
+    // Fallback: show all fields that have a value
+    const fieldsConfig = o.checkout_pages?.fields_config || null;
+
+    let fieldRows = '';
+    if (fieldsConfig && Array.isArray(fieldsConfig)) {
+      // Only render enabled fields, in order
+      fieldsConfig.filter(f => f.enabled).forEach(f => {
+        const def = DETAIL_FIELD_MAP[f.key];
+        if (!def) return;
+        const val = def.get(o);
+        fieldRows += _detailRow(f.label || def.label, val);
+      });
+    } else {
+      // Fallback: show all fields that have a value
+      Object.entries(DETAIL_FIELD_MAP).forEach(([key, def]) => {
+        const val = def.get(o);
+        if (val) fieldRows += _detailRow(def.label, val);
+      });
+    }
+
     document.getElementById('modalBody').innerHTML = `
-      <div style="display:grid;gap:12px;">
-        <div><div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;">Customer</div>
-          <div style="font-weight:700;font-size:16px;">${o.customer_name || '-'}</div></div>
-        <div class="flex gap-12">
-          <div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--gray-400);">No. WhatsApp</div><div>${o.customer_wa || '-'}</div></div>
-          <div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--gray-400);">Produk</div><div>${o.products?.name || '-'}</div></div>
+      <div style="display:grid;gap:14px;">
+        ${fieldRows}
+        <div style="display:flex;gap:12px;">
+          <div style="flex:1;">
+            <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">Produk</div>
+            <div style="font-size:14px;">${o.products?.name || '-'}</div>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">CS Handle</div>
+            <div style="font-size:14px;">${o.cs_team?.name || '-'}</div>
+          </div>
         </div>
-        <div><div style="font-size:11px;font-weight:600;color:var(--gray-400);">Alamat</div><div>${o.customer_address || '-'}</div></div>
-        <div class="flex gap-12">
-          <div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--gray-400);">Kota</div><div>${o.customer_city || '-'}</div></div>
-          <div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--gray-400);">CS Handle</div><div>${o.cs_team?.name || '-'}</div></div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">Waktu Order</div>
+          <div style="font-size:14px;">${new Date(o.created_at).toLocaleString('id-ID')}</div>
         </div>
-        ${o.customer_note ? `<div><div style="font-size:11px;font-weight:600;color:var(--gray-400);">Catatan</div><div>${o.customer_note}</div></div>` : ''}
-        <div><div style="font-size:11px;font-weight:600;color:var(--gray-400);">Waktu Order</div><div>${new Date(o.created_at).toLocaleString('id-ID')}</div></div>
       </div>`;
     document.getElementById('detailModal').classList.remove('hidden');
   }
@@ -285,7 +328,7 @@
 
   async function _fetchAndOpenOrder(id) {
     try {
-      const res = await sbGet('orders', `?id=eq.${id}&select=*,products(name,followup_welcome),cs_team(name,wa_number)&limit=1`);
+      const res = await sbGet('orders', `?id=eq.${id}&select=*,products(name,followup_welcome),cs_team(name,wa_number),checkout_pages(fields_config)&limit=1`);
       if (res && res[0]) {
         // Inject into allOrders temporarily so openDetail can find it
         if (!allOrders.find(o => o.id === id)) allOrders.unshift(res[0]);

@@ -6,83 +6,128 @@
 <title>Checkout</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --primary: #2563EB;
-    --gray-100: #F3F4F6; --gray-200: #E5E7EB; --gray-300: #D1D5DB;
-    --gray-400: #9CA3AF; --gray-500: #6B7280; --gray-700: #374151;
-    --gray-800: #1F2937; --white: #FFFFFF; --red: #EF4444;
-    --radius: 10px; --radius-sm: 6px;
-  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', sans-serif; background: #F0F4F8; min-height: 100vh; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #fff;
+    min-height: 100vh;
+    color: #1F2937;
+  }
 
+  /* Wrap — bersih, tanpa background abu */
   .checkout-wrap {
-    max-width: 480px; margin: 0 auto; padding: 20px 16px 60px;
+    max-width: 460px;
+    margin: 0 auto;
+    padding: 0;
   }
 
-  .checkout-card {
-    background: var(--white); border-radius: var(--radius);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden;
+  /* Trust bar */
+  .trust-bar {
+    display: flex;
+    gap: 20px;
+    padding: 14px 20px;
+    border-bottom: 1px solid #E5E7EB;
+  }
+  .trust-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: #6B7280;
   }
 
-  .checkout-header { padding: 16px 20px; border-bottom: 1px solid var(--gray-200); }
-  .trust-row { display: flex; gap: 16px; align-items: center; }
-  .trust-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--gray-500); }
-  .trust-icon { font-size: 16px; }
+  /* Product name */
+  .product-name-co {
+    padding: 14px 20px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    border-bottom: 1px solid #E5E7EB;
+  }
 
-  .product-section { padding: 16px 20px; border-bottom: 1px solid var(--gray-100); }
-  .product-img { width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-sm); margin-bottom: 12px; }
-  .product-name { font-size: 15px; font-weight: 700; color: var(--gray-800); margin-bottom: 4px; }
-  .product-benefits { margin-top: 8px; }
-  .benefit-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--gray-700); margin-bottom: 4px; }
-
+  /* Form section */
   .form-section { padding: 20px; }
-  .form-label-co { display: block; font-size: 12px; font-weight: 700; color: var(--gray-800); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--gray-200); padding-bottom: 8px; }
 
-  .co-group { margin-bottom: 12px; }
-  .co-label { font-size: 12px; color: var(--gray-500); margin-bottom: 4px; }
+  .data-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 16px;
+  }
+
+  .co-group { margin-bottom: 10px; }
+
   .co-input {
-    width: 100%; padding: 11px 14px;
-    border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm);
-    font-size: 14px; color: var(--gray-800); outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+    padding: 14px 16px;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1F2937;
+    background: #fff;
+    outline: none;
     font-family: inherit;
+    transition: border-color 0.15s;
   }
-  .co-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-  .co-input.error { border-color: var(--red); }
-  .co-input::placeholder { color: var(--gray-300); }
+  .co-input:focus { border-color: #F59E0B; }
+  .co-input.error { border-color: #EF4444; }
+  .co-input::placeholder { color: #D1D5DB; }
 
-  .order-section { padding: 16px 20px; background: var(--gray-100); }
-  .order-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--gray-700); margin-bottom: 6px; }
-  .order-total { font-weight: 700; font-size: 15px; color: var(--gray-800); border-top: 1px solid var(--gray-300); padding-top: 8px; margin-top: 4px; }
+  textarea.co-input { resize: vertical; min-height: 80px; }
 
-  .submit-section { padding: 16px 20px; }
+  .field-error { font-size: 11px; color: #EF4444; margin-top: 3px; display: none; }
+
+  /* Submit */
+  .submit-section { padding: 0 20px 20px; }
+
   .btn-submit {
-    width: 100%; padding: 15px; border: none; border-radius: var(--radius-sm);
-    font-size: 16px; font-weight: 800; color: var(--white);
-    cursor: pointer; transition: filter 0.15s; letter-spacing: 0.02em;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: filter 0.15s;
+    letter-spacing: 0.01em;
   }
-  .btn-submit:hover { filter: brightness(0.92); }
-  .btn-submit:disabled { filter: brightness(0.7); cursor: not-allowed; }
+  .btn-submit:hover   { filter: brightness(0.93); }
+  .btn-submit:disabled { filter: brightness(0.6); cursor: not-allowed; }
 
-  .footer-co { text-align: center; font-size: 11px; color: var(--gray-400); margin-top: 12px; }
+  .btn-arrow {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
 
-  /* Loading overlay */
+  .footer-co {
+    text-align: center;
+    font-size: 11px;
+    color: #9CA3AF;
+    padding: 12px 20px 24px;
+  }
+
+  /* Loading */
   .loading-overlay {
-    position: fixed; inset: 0; background: rgba(255,255,255,0.85);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    z-index: 9999; display: none;
+    position: fixed; inset: 0;
+    background: rgba(255,255,255,0.9);
+    display: none;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 9999;
   }
   .spinner {
-    width: 40px; height: 40px; border: 4px solid var(--gray-200);
-    border-top-color: var(--primary); border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    width: 36px; height: 36px;
+    border: 3px solid #E5E7EB;
+    border-top-color: #F59E0B;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Error msg */
-  .field-error { font-size: 11px; color: var(--red); margin-top: 3px; display: none; }
 </style>
 </head>
 <body>
@@ -93,42 +138,32 @@
 </div>
 
 <div class="checkout-wrap" id="checkoutWrap" style="display:none;">
-  <div class="checkout-card">
-    <!-- Header: Trust signals -->
-    <div class="checkout-header">
-      <div class="trust-row">
-        <div class="trust-item"><span class="trust-icon">🔒</span> Transaksi Aman</div>
-        <div class="trust-item"><span class="trust-icon">👍</span> Jaminan Kepuasan</div>
-      </div>
-    </div>
 
-    <!-- Product info -->
-    <div class="product-section" id="productSection">
-      <div id="productImg"></div>
-      <div class="product-name" id="productName"></div>
-      <div class="product-benefits" id="productBenefits"></div>
-    </div>
-
-    <!-- Form -->
-    <div class="form-section">
-      <div class="form-label-co">Data Penerima:</div>
-      <div id="formFields"></div>
-    </div>
-
-    <!-- Order summary -->
-    <div class="order-section" id="orderSection">
-      <div class="order-row"><span id="orderProductName">Produk</span><span id="orderPrice"></span></div>
-      <div class="order-row order-total"><span>Total</span><span id="orderTotal"></span></div>
-    </div>
-
-    <!-- Submit -->
-    <div class="submit-section">
-      <button class="btn-submit" id="btnSubmit" onclick="submitOrder()">
-        <span id="btnText">Beli Sekarang</span> ⊙
-      </button>
-      <div class="footer-co">Pesanan Anda aman & terlindungi</div>
-    </div>
+  <!-- Trust bar -->
+  <div class="trust-bar">
+    <div class="trust-item">🔒 Transaksi Aman</div>
+    <div class="trust-item">👍 Jaminan Kepuasan</div>
   </div>
+
+  <!-- Product name -->
+  <div class="product-name-co" id="productName"></div>
+
+  <!-- Form -->
+  <div class="form-section">
+    <div class="data-label">Data Penerima:</div>
+    <div id="formFields"></div>
+  </div>
+
+  <!-- Submit -->
+  <div class="submit-section">
+    <button class="btn-submit" id="btnSubmit" onclick="submitOrder()">
+      <span id="btnText">Beli Sekarang</span>
+      <span class="btn-arrow">→</span>
+    </button>
+  </div>
+
+  <div class="footer-co">Pesanan Anda aman & terlindungi</div>
+
 </div>
 
 <!-- Error page -->
@@ -246,41 +281,27 @@
   function renderPage() {
     document.getElementById('loadingOverlay').style.display = 'none';
 
-    // Product image
-    const imgEl = document.getElementById('productImg');
-    if (product.image_url) {
-      imgEl.innerHTML = `<img src="${product.image_url}" class="product-img" alt="${product.name}">`;
-    }
-
     // Product name
     document.getElementById('productName').textContent = product.name;
-
-    // Benefits
-    const desc = product.description || '';
-    const lines = desc.split('\n').filter(l => l.trim());
-    if (lines.length) {
-      document.getElementById('productBenefits').innerHTML =
-        '<div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:6px;">Yang Anda Dapatkan:</div>' +
-        lines.map(l => `<div class="benefit-item">✅ ${l.trim()}</div>`).join('');
-    }
-
-    // Order summary
-    document.getElementById('orderProductName').textContent = product.name;
-    document.getElementById('orderPrice').textContent = formatRp(product.price);
-    document.getElementById('orderTotal').textContent = formatRp(product.price);
 
     // Fields
     fields = checkoutPage.fields_config || [];
     const enabledFields = fields.filter(f => f.enabled);
-    document.getElementById('formFields').innerHTML = enabledFields.map(f => `
-      <div class="co-group">
-        <input type="${f.key==='email'?'email':f.key==='wa'?'tel':'text'}"
-               class="co-input"
-               id="field-${f.key}"
-               placeholder="${f.label}${f.required?' *':''}"
-               autocomplete="${f.key==='nama'?'name':f.key==='wa'?'tel':f.key==='email'?'email':f.key==='alamat'?'street-address':'off'}">
+    document.getElementById('formFields').innerHTML = enabledFields.map(f => {
+      const inputType = f.key === 'email' ? 'email' : f.key === 'wa' ? 'tel' : 'text';
+      const isTextarea = f.key === 'keluhan' || f.key === 'catatan';
+      const autocomplete = f.key==='nama'?'name':f.key==='wa'?'tel':f.key==='email'?'email':f.key==='alamat'?'street-address':'off';
+      const placeholder = f.label + (f.required ? ' *' : '');
+
+      const input = isTextarea
+        ? `<textarea class="co-input" id="field-${f.key}" placeholder="${placeholder}" rows="3"></textarea>`
+        : `<input type="${inputType}" class="co-input" id="field-${f.key}" placeholder="${placeholder}" autocomplete="${autocomplete}">`;
+
+      return `<div class="co-group">
+        ${input}
         <div class="field-error" id="err-${f.key}">${f.label} wajib diisi</div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     // Button
     document.getElementById('btnText').textContent = checkoutPage.button_text || 'Beli Sekarang';
@@ -425,7 +446,19 @@
           .replace(/\{\{product\}\}/gi, product.name);
 
         const waUrl = `https://wa.me/${normalizeWA(cs.wa_number)}?text=${encodeURIComponent(msg)}`;
-        setTimeout(() => { window.location.href = waUrl; }, 500);
+        setTimeout(() => {
+          // Kalau dalam iframe, redirect ke parent window agar wa.me bisa terbuka
+          try {
+            if (window.top !== window.self) {
+              window.top.location.href = waUrl;
+            } else {
+              window.location.href = waUrl;
+            }
+          } catch(e) {
+            // Kalau cross-origin iframe, buka di tab baru
+            window.open(waUrl, '_blank');
+          }
+        }, 500);
       }
 
     } catch(e) {

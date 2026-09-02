@@ -1,5 +1,5 @@
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://bdoodcaxizksnhxunjky.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkb29kY2F4aXprc25oeHVuamt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNTIxNzYsImV4cCI6MjEwMzkyODE3Nn0.5OX4tunpCbAbaMb7NtEDiuxpxtHw8LoCC4iN1A4Dkds';
 
 // Admin credentials (single login)
 const ADMIN_USER = 'admin';

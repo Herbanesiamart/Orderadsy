@@ -10,44 +10,6 @@
 <style>
   .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
   @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
-  .date-filter-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-sm);
-    background: var(--white);
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--gray-700);
-    position: relative;
-  }
-  .date-filter-btn:hover { background: var(--gray-50); }
-  .filter-dropdown {
-    position: absolute;
-    top: calc(100% + 6px);
-    right: 0;
-    background: var(--white);
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-md);
-    padding: 6px;
-    z-index: 100;
-    min-width: 160px;
-    display: none;
-  }
-  .filter-dropdown.open { display: block; }
-  .filter-opt {
-    padding: 8px 12px;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-size: 13px;
-    color: var(--gray-700);
-  }
-  .filter-opt:hover  { background: var(--gray-100); }
-  .filter-opt.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
   .chart-legend { display: flex; gap: 16px; font-size: 12px; color: var(--gray-500); }
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
 </style>
@@ -59,16 +21,7 @@
 <div class="page-content">
   <div class="page-header">
     <div class="section-title" style="font-size:20px;">Dashboard</div>
-    <div style="position:relative;">
-      <button class="date-filter-btn" onclick="toggleFilter()">
-        📅 <span id="filterLabel">Last 30 Days</span> ▾
-      </button>
-      <div class="filter-dropdown" id="filterDropdown">
-        <div class="filter-opt active" onclick="setFilter(7,'Last 7 Days',this)">Last 7 Days</div>
-        <div class="filter-opt" onclick="setFilter(30,'Last 30 Days',this)">Last 30 Days</div>
-        <div class="filter-opt" onclick="setFilter(90,'Last 90 Days',this)">Last 90 Days</div>
-      </div>
-    </div>
+    <button class="date-filter-btn" id="dateFilterBtn">📅 <span class="df-label">Last 30 Days</span> ▾</button>
   </div>
 
   <!-- KPI Cards -->
@@ -124,37 +77,30 @@
 
 <script src="js/config.js"></script>
 <script src="js/navbar.js"></script>
+<script src="js/date-filter.js"></script>
 <script>
   requireAuth();
   renderNavbar('dashboard');
 
-  let filterDays = 30;
   let chart = null;
+  let dateFilter;
 
-  function toggleFilter() {
-    document.getElementById('filterDropdown').classList.toggle('open');
-  }
-
-  document.addEventListener('click', e => {
-    if (!e.target.closest('.date-filter-btn')) {
-      document.getElementById('filterDropdown').classList.remove('open');
-    }
+  // Init DateFilter after DOM ready
+  window.addEventListener('DOMContentLoaded', () => {
+    dateFilter = new DateFilter(
+      document.getElementById('dateFilterBtn'),
+      ({ from, to }) => loadDashboard(from, to)
+    );
   });
 
-  function setFilter(days, label, el) {
-    filterDays = days;
-    document.getElementById('filterLabel').textContent = label;
-    document.querySelectorAll('.filter-opt').forEach(o => o.classList.remove('active'));
-    el.classList.add('active');
-    document.getElementById('filterDropdown').classList.remove('open');
-    loadDashboard();
-  }
-
-  async function loadDashboard() {
+  async function loadDashboard(from, to) {
     const csFilter = getCSId() ? `&cs_id=eq.${getCSId()}` : '';
     try {
-      const since = new Date(Date.now() - filterDays * 86400000).toISOString();
-      const orders = await sbGet('orders', `?created_at=gte.${since}${csFilter}&select=id,status,created_at`);
+      const fromISO = from.toISOString();
+      const toISO   = to.toISOString();
+      const orders = await sbGet('orders',
+        `?created_at=gte.${fromISO}&created_at=lte.${toISO}${csFilter}&select=id,status,created_at`
+      );
 
       const total   = orders.length;
       const closing = orders.filter(o => o.status === 'closing').length;
@@ -166,7 +112,7 @@
       document.getElementById('kpiRate').textContent    = rate + '%';
       document.getElementById('kpiPending').textContent = pending.toLocaleString('id-ID');
 
-      buildChart(orders, filterDays);
+      buildChart(orders, from, to);
     } catch(e) {
       console.error(e);
     }
@@ -177,19 +123,25 @@
     } catch(e) {}
   }
 
-  function buildChart(orders, days) {
+  function buildChart(orders, from, to) {
     const labels = [];
     const ordersData  = [];
     const closingData = [];
 
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(Date.now() - i * 86400000);
-      const label = d.toLocaleDateString('id-ID', { day:'numeric', month:'short' });
+    // Iterate day by day from from → to
+    const cur = new Date(from);
+    cur.setHours(0, 0, 0, 0);
+    const end = new Date(to);
+    end.setHours(0, 0, 0, 0);
+
+    while (cur <= end) {
+      const label  = cur.toLocaleDateString('id-ID', { day:'numeric', month:'short' });
       labels.push(label);
-      const dayStr = d.toISOString().slice(0, 10);
-      const dayOrders  = orders.filter(o => o.created_at.slice(0,10) === dayStr);
+      const dayStr = cur.toISOString().slice(0, 10);
+      const dayOrders = orders.filter(o => o.created_at.slice(0, 10) === dayStr);
       ordersData.push(dayOrders.length);
       closingData.push(dayOrders.filter(o => o.status === 'closing').length);
+      cur.setDate(cur.getDate() + 1);
     }
 
     if (chart) chart.destroy();
@@ -249,8 +201,6 @@
         </div>`;
     }).join('');
   }
-
-  loadDashboard();
 </script>
 </body>
 </html>

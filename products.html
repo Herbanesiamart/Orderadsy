@@ -22,8 +22,9 @@
 <div class="page-content">
   <div class="page-header">
     <div class="page-title">Products</div>
-    <div class="flex gap-8">
+    <div class="flex gap-8 items-center">
       <input type="text" class="form-control" id="searchInput" placeholder="Cari produk..." style="width:220px;" oninput="filterProducts()">
+      <button class="date-filter-btn" id="dateFilterBtn">📅 <span class="df-label">Last 30 Days</span> ▾</button>
       <a href="products-add.html" class="btn btn-accent">＋ Add Product</a>
     </div>
   </div>
@@ -53,17 +54,30 @@
 
 <script src="js/config.js"></script>
 <script src="js/navbar.js"></script>
+<script src="js/date-filter.js"></script>
 <script>
   requireAuth();
   renderNavbar('products');
 
   let allProducts = [];
+  let dateFilter;
+  let _currentFrom, _currentTo;
 
-  async function loadProducts() {
+  window.addEventListener('DOMContentLoaded', () => {
+    dateFilter = new DateFilter(
+      document.getElementById('dateFilterBtn'),
+      ({ from, to }) => { _currentFrom = from; _currentTo = to; loadProducts(from, to); }
+    );
+  });
+
+  async function loadProducts(from, to) {
+    // Use provided range or fall back to last 30 days
+    const fromISO = from ? from.toISOString() : new Date(Date.now() - 29 * 86400000).toISOString();
+    const toISO   = to   ? to.toISOString()   : new Date().toISOString();
     try {
       const [products, orderStats] = await Promise.all([
         sbGet('products', '?order=created_at.desc&select=*'),
-        sbGet('orders', '?select=product_id,status&limit=5000').catch(() => [])
+        sbGet('orders', `?created_at=gte.${fromISO}&created_at=lte.${toISO}&select=product_id,status&limit=5000`).catch(() => [])
       ]);
 
       const statsMap = {};
@@ -140,13 +154,13 @@
     try {
       await sbDelete('products', `?id=eq.${id}`);
       showToast('Produk dihapus', 'success');
-      loadProducts();
+      loadProducts(_currentFrom, _currentTo);
     } catch(e) {
       showToast('Gagal hapus: ' + e.message, 'error');
     }
   }
 
-  loadProducts();
+  // Initial load is triggered by DateFilter's default (Last 30 Days) callback
 </script>
 </body>
 </html>

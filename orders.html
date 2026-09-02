@@ -22,6 +22,7 @@
         <option value="cancel">Cancel</option>
       </select>
       <input type="text" class="form-control" id="searchInput" placeholder="Cari nama customer..." style="width:220px;" oninput="filterOrders()">
+      <button class="date-filter-btn" id="dateFilterBtn">📅 <span class="df-label">Last 30 Days</span> ▾</button>
     </div>
   </div>
 
@@ -64,6 +65,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/navbar.js"></script>
+<script src="js/date-filter.js"></script>
 <script>
   requireAuth();
   renderNavbar('orders');
@@ -74,6 +76,16 @@
   let currentOrder = null;
   let currentPage = 1;
   let totalCount = 0;
+  let _dateFrom = null;
+  let _dateTo   = null;
+  let dateFilter;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    dateFilter = new DateFilter(
+      document.getElementById('dateFilterBtn'),
+      ({ from, to }) => { _dateFrom = from; _dateTo = to; loadOrders(1); }
+    );
+  });
 
   async function loadOrders(page = 1) {
     currentPage = page;
@@ -84,6 +96,8 @@
     let filter = status ? `status=eq.${status}&` : '';
     if (search) filter += `customer_name=ilike.*${encodeURIComponent(search)}*&`;
     if (getCSId()) filter += `cs_id=eq.${getCSId()}&`;
+    if (_dateFrom) filter += `created_at=gte.${_dateFrom.toISOString()}&`;
+    if (_dateTo)   filter += `created_at=lte.${_dateTo.toISOString()}&`;
 
     const countQ = `?${filter}select=id`;
     const dataQ  = `?${filter}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,products(name,followup_welcome),cs_team(name,wa_number)`;
@@ -247,7 +261,7 @@
     window.open(url, '_blank');
   }
 
-  loadOrders(1);
+  // Initial load is triggered by DateFilter's default (Last 30 Days) callback
 </script>
 </body>
 </html>

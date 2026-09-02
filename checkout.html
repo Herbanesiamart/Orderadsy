@@ -285,9 +285,12 @@
       const autocomplete = f.key==='nama'?'name':f.key==='wa'?'tel':f.key==='email'?'email':f.key==='alamat'?'street-address':'off';
       const placeholder = f.label + ' *';
 
+      const waAttrs = f.key === 'wa'
+        ? `inputmode="numeric" pattern="[0-9+\\-() ]*" oninput="this.value=this.value.replace(/[^0-9+()\\- ]/g,'')"`
+        : '';
       const input = isTextarea
         ? `<textarea class="co-input" id="field-${f.key}" placeholder="${placeholder}" rows="3"></textarea>`
-        : `<input type="${inputType}" class="co-input" id="field-${f.key}" placeholder="${placeholder}" autocomplete="${autocomplete}">`;
+        : `<input type="${inputType}" class="co-input" id="field-${f.key}" placeholder="${placeholder}" autocomplete="${autocomplete}" ${waAttrs}>`;
 
       return `<div class="co-group">
         ${input}
@@ -319,6 +322,14 @@
     return el ? el.value.trim() : '';
   }
 
+  function validateWA(raw) {
+    const digits = raw.replace(/\D/g, '');
+    // Harus angka semua, panjang 9–15 digit, dan mulai dari 08 / 628 / 62
+    if (!digits) return false;
+    if (digits.length < 9 || digits.length > 15) return false;
+    return /^(08|628|62)/.test(digits);
+  }
+
   function validateForm() {
     let valid = true;
     const enabledFields = fields.filter(f => f.enabled);
@@ -326,8 +337,18 @@
       const val = getFieldVal(f.key);
       const errEl = document.getElementById('err-' + f.key);
       const inputEl = document.getElementById('field-' + f.key);
-      // Semua field yang ditampilkan wajib diisi
-      if (!val) {
+
+      let fieldValid = !!val;
+
+      // Validasi khusus nomor WA
+      if (f.key === 'wa' && val) {
+        fieldValid = validateWA(val);
+        if (errEl && !fieldValid) errEl.textContent = 'Nomor WhatsApp tidak valid (contoh: 08123456789)';
+      } else if (errEl) {
+        errEl.textContent = f.label + ' wajib diisi';
+      }
+
+      if (!fieldValid) {
         if (errEl) errEl.style.display = 'block';
         if (inputEl) inputEl.classList.add('error');
         valid = false;

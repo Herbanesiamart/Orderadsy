@@ -14,7 +14,7 @@
 <div class="page-content">
   <div class="page-header">
     <div class="page-title">Orders</div>
-    <div class="flex gap-8 flex-wrap">
+    <div class="flex gap-8 flex-wrap orders-filter-row">
       <select class="form-control" id="filterStatus" style="width:150px;" onchange="loadOrders(1)">
         <option value="">Semua Status</option>
         <option value="pending">Pending</option>
@@ -26,7 +26,7 @@
   </div>
 
   <div class="card">
-    <div class="table-wrap">
+    <div class="table-wrap orders-table-wrap">
       <table>
         <thead>
           <tr>
@@ -83,6 +83,7 @@
 
     let filter = status ? `status=eq.${status}&` : '';
     if (search) filter += `customer_name=ilike.*${encodeURIComponent(search)}*&`;
+    if (getCSId()) filter += `cs_id=eq.${getCSId()}&`;
 
     const countQ = `?${filter}select=id`;
     const dataQ  = `?${filter}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,products(name),cs_team(name,wa_number)`;
@@ -135,23 +136,22 @@
     tbody.innerHTML = orders.map(o => `
       <tr style="cursor:pointer;" onclick="openDetail('${o.id}')">
         <td>
-          <div style="font-weight:600;">${o.customer_name || '-'}</div>
-          <div style="font-size:11px;color:var(--gray-400);">${o.customer_wa || ''}</div>
+          <div style="font-weight:600;font-size:14px;">${o.customer_name || '-'}</div>
+          <div style="font-size:12px;color:var(--gray-400);">💬 ${o.customer_wa || ''}</div>
+          <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">${o.products?.name || ''}</div>
         </td>
-        <td>${o.products?.name || '-'}</td>
-        <td>${o.cs_team?.name || '-'}</td>
-        <td style="font-size:12px;color:var(--gray-400);">${timeAgo(o.created_at)}</td>
-        <td>
-          <select class="form-control" style="width:110px;padding:4px 8px;font-size:12px;" onclick="event.stopPropagation()" onchange="updateStatus('${o.id}',this.value)">
+        <td data-label="Produk">${o.products?.name || '-'}</td>
+        <td data-label="CS">${o.cs_team?.name || '-'}</td>
+        <td data-label="Waktu" style="font-size:12px;color:var(--gray-400);">${timeAgo(o.created_at)}</td>
+        <td data-label="Status" onclick="event.stopPropagation()">
+          <select class="form-control" style="width:110px;padding:4px 8px;font-size:12px;" onchange="updateStatus('${o.id}',this.value)">
             <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
             <option value="closing" ${o.status==='closing'?'selected':''}>Closing</option>
             <option value="cancel"  ${o.status==='cancel'?'selected':''}>Cancel</option>
           </select>
         </td>
-        <td onclick="event.stopPropagation()">
-          <div class="flex gap-8">
-            <button class="btn btn-outline btn-sm" onclick="openWADirect('${o.customer_wa}','${(o.customer_name||'').replace(/'/g,"\\'")}')">💬 WA</button>
-          </div>
+        <td data-label="" onclick="event.stopPropagation()">
+          <button class="btn btn-outline btn-sm" onclick="openWADirect('${o.customer_wa}','${(o.customer_name||'').replace(/'/g,"\\'")}')">💬 WA</button>
         </td>
       </tr>`).join('');
   }

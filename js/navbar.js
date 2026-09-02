@@ -58,6 +58,33 @@ document.addEventListener('click', function() {
   if (p) p.classList.remove('open');
 });
 
+/* ── Notification Sound ──────────────────────────────────── */
+function playOrderSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Nada 1 — "ding" pendek
+    function beep(freq, startTime, duration, vol = 0.4) {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+      gain.gain.setValueAtTime(vol, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    }
+
+    const t = ctx.currentTime;
+    beep(880, t,        0.12);  // La5
+    beep(1046, t + 0.13, 0.12); // Do6
+    beep(1318, t + 0.26, 0.22); // Mi6 — lebih panjang
+
+  } catch(e) {}
+}
+
 /* ── Notification System ──────────────────────────────────── */
 let _notifData     = [];      // all fetched orders for notif
 let _notifReadIds  = new Set(); // ids marked as read (persisted in localStorage)

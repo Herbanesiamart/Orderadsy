@@ -721,19 +721,6 @@ select.form-control { cursor: pointer; }
 }
 .color-swatch.selected { border-color: var(--gray-800); }
 
-/* ── Icon picker ── */
-.icon-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.icon-opt {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 12px; border: 1.5px solid var(--gray-200);
-  border-radius: var(--radius-sm); cursor: pointer;
-  font-size: 13px; color: var(--gray-600);
-  background: var(--white); transition: all 0.15s;
-  user-select: none;
-}
-.icon-opt:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-.icon-opt.selected { border-color: var(--primary); color: var(--primary); background: var(--primary-light); font-weight: 600; }
-
 /* ── Misc ── */
 .page-header {
   display: flex;

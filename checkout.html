@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #2563EB;
+    --gray-100: #F3F4F6; --gray-200: #E5E7EB; --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF; --gray-500: #6B7280; --gray-700: #374151;
+    --gray-800: #1F2937; --white: #FFFFFF; --red: #EF4444;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: #F0F4F8; min-height: 100vh; }
+
+  .checkout-wrap {
+    max-width: 480px; margin: 0 auto; padding: 20px 16px 60px;
+  }
+
+  .checkout-card {
+    background: var(--white); border-radius: var(--radius);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden;
+  }
+
+  .checkout-header { padding: 16px 20px; border-bottom: 1px solid var(--gray-200); }
+  .trust-row { display: flex; gap: 16px; align-items: center; }
+  .trust-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--gray-500); }
+  .trust-icon { font-size: 16px; }
+
+  .product-section { padding: 16px 20px; border-bottom: 1px solid var(--gray-100); }
+  .product-img { width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-sm); margin-bottom: 12px; }
+  .product-name { font-size: 15px; font-weight: 700; color: var(--gray-800); margin-bottom: 4px; }
+  .product-benefits { margin-top: 8px; }
+  .benefit-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--gray-700); margin-bottom: 4px; }
+
+  .form-section { padding: 20px; }
+  .form-label-co { display: block; font-size: 12px; font-weight: 700; color: var(--gray-800); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--gray-200); padding-bottom: 8px; }
+
+  .co-group { margin-bottom: 12px; }
+  .co-label { font-size: 12px; color: var(--gray-500); margin-bottom: 4px; }
+  .co-input {
+    width: 100%; padding: 11px 14px;
+    border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm);
+    font-size: 14px; color: var(--gray-800); outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+  }
+  .co-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+  .co-input.error { border-color: var(--red); }
+  .co-input::placeholder { color: var(--gray-300); }
+
+  .order-section { padding: 16px 20px; background: var(--gray-100); }
+  .order-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--gray-700); margin-bottom: 6px; }
+  .order-total { font-weight: 700; font-size: 15px; color: var(--gray-800); border-top: 1px solid var(--gray-300); padding-top: 8px; margin-top: 4px; }
+
+  .submit-section { padding: 16px 20px; }
+  .btn-submit {
+    width: 100%; padding: 15px; border: none; border-radius: var(--radius-sm);
+    font-size: 16px; font-weight: 800; color: var(--white);
+    cursor: pointer; transition: filter 0.15s; letter-spacing: 0.02em;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-submit:hover { filter: brightness(0.92); }
+  .btn-submit:disabled { filter: brightness(0.7); cursor: not-allowed; }
+
+  .footer-co { text-align: center; font-size: 11px; color: var(--gray-400); margin-top: 12px; }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: fixed; inset: 0; background: rgba(255,255,255,0.85);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 9999; display: none;
+  }
+  .spinner {
+    width: 40px; height: 40px; border: 4px solid var(--gray-200);
+    border-top-color: var(--primary); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Error msg */
+  .field-error { font-size: 11px; color: var(--red); margin-top: 3px; display: none; }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="margin-top:12px;font-size:13px;color:var(--gray-500);">Memproses pesanan...</div>
+</div>
+
+<div class="checkout-wrap" id="checkoutWrap" style="display:none;">
+  <div class="checkout-card">
+    <!-- Header: Trust signals -->
+    <div class="checkout-header">
+      <div class="trust-row">
+        <div class="trust-item"><span class="trust-icon">🔒</span> Transaksi Aman</div>
+        <div class="trust-item"><span class="trust-icon">👍</span> Jaminan Kepuasan</div>
+      </div>
+    </div>
+
+    <!-- Product info -->
+    <div class="product-section" id="productSection">
+      <div id="productImg"></div>
+      <div class="product-name" id="productName"></div>
+      <div class="product-benefits" id="productBenefits"></div>
+    </div>
+
+    <!-- Form -->
+    <div class="form-section">
+      <div class="form-label-co">Data Penerima:</div>
+      <div id="formFields"></div>
+    </div>
+
+    <!-- Order summary -->
+    <div class="order-section" id="orderSection">
+      <div class="order-row"><span id="orderProductName">Produk</span><span id="orderPrice"></span></div>
+      <div class="order-row order-total"><span>Total</span><span id="orderTotal"></span></div>
+    </div>
+
+    <!-- Submit -->
+    <div class="submit-section">
+      <button class="btn-submit" id="btnSubmit" onclick="submitOrder()">
+        <span id="btnText">Beli Sekarang</span> ⊙
+      </button>
+      <div class="footer-co">Pesanan Anda aman & terlindungi</div>
+    </div>
+  </div>
+</div>
+
+<!-- Error page -->
+<div id="errorPage" style="display:none;text-align:center;padding:80px 20px;">
+  <div style="font-size:48px;margin-bottom:16px;">😕</div>
+  <div style="font-size:18px;font-weight:700;color:#1F2937;margin-bottom:8px;">Halaman tidak ditemukan</div>
+  <div style="color:#9CA3AF;font-size:14px;">Link checkout tidak valid atau sudah tidak aktif.</div>
+</div>
+
+<script>
+  const SUPABASE_URL     = 'YOUR_SUPABASE_URL';
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+  const API_URL          = 'YOUR_API_URL'; // Supabase Edge Function URL
+
+  const sbH = {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+  };
+
+  async function sbGet(table, q = '') {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${q}`, { headers: sbH });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  function formatRp(num) {
+    return 'Rp' + (num || 0).toLocaleString('id-ID');
+  }
+
+  function normalizeWA(hp) {
+    let n = (hp || '').replace(/\D/g, '');
+    if (n.startsWith('0')) n = '62' + n.slice(1);
+    if (n.startsWith('8')) n = '62' + n;
+    if (!n.startsWith('62')) n = '62' + n;
+    return n;
+  }
+
+  // ── Meta Pixel browser-side ──────────────────────────────
+  function initPixel(pixelId) {
+    if (!pixelId) return;
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
+    document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', pixelId);
+    fbq('track', 'ViewContent');
+  }
+
+  // ── Generate unique event ID for dedup ──────────────────
+  function genEventId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  }
+
+  // ── Page state ──────────────────────────────────────────
+  const params      = new URLSearchParams(location.search);
+  const slug        = params.get('slug');
+  const pageIdParam = params.get('page');
+
+  let product   = null;
+  let checkoutPage = null;
+  let assignedCS = [];
+  let rotatorIndex = 0;
+  let fields = [];
+
+  async function init() {
+    if (!slug) { showError(); return; }
+
+    try {
+      // Load product by slug
+      const products = await sbGet('products', `?slug=eq.${slug}&status=eq.active&limit=1`);
+      if (!products.length) { showError(); return; }
+      product = products[0];
+
+      // Load checkout page
+      let pages;
+      if (pageIdParam) {
+        pages = await sbGet('checkout_pages', `?id=eq.${pageIdParam}&limit=1`);
+      } else {
+        pages = await sbGet('checkout_pages', `?product_id=eq.${product.id}&order=created_at.asc&limit=1`);
+      }
+      if (!pages.length) { showError(); return; }
+      checkoutPage = pages[0];
+
+      // Load CS list for this product
+      const csAssign = await sbGet('product_cs', `?product_id=eq.${product.id}&select=cs_id,cs_team(id,name,wa_number,email)`);
+      assignedCS = csAssign.map(a => a.cs_team).filter(Boolean);
+
+      // Get rotator index
+      const rotator = await sbGet('cs_rotator', `?product_id=eq.${product.id}&limit=1`).catch(() => []);
+      rotatorIndex = rotator[0]?.last_cs_index || 0;
+
+      // Set title
+      document.title = product.name + ' — Order';
+
+      // Init pixel (browser side)
+      initPixel(product.pixel_id);
+
+      // Render page
+      renderPage();
+      document.getElementById('checkoutWrap').style.display = '';
+
+    } catch(e) {
+      console.error(e);
+      showError();
+    }
+  }
+
+  function showError() {
+    document.getElementById('loadingOverlay').style.display = 'none';
+    document.getElementById('errorPage').style.display = '';
+  }
+
+  function renderPage() {
+    document.getElementById('loadingOverlay').style.display = 'none';
+
+    // Product image
+    const imgEl = document.getElementById('productImg');
+    if (product.image_url) {
+      imgEl.innerHTML = `<img src="${product.image_url}" class="product-img" alt="${product.name}">`;
+    }
+
+    // Product name
+    document.getElementById('productName').textContent = product.name;
+
+    // Benefits
+    const desc = product.description || '';
+    const lines = desc.split('\n').filter(l => l.trim());
+    if (lines.length) {
+      document.getElementById('productBenefits').innerHTML =
+        '<div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:6px;">Yang Anda Dapatkan:</div>' +
+        lines.map(l => `<div class="benefit-item">✅ ${l.trim()}</div>`).join('');
+    }
+
+    // Order summary
+    document.getElementById('orderProductName').textContent = product.name;
+    document.getElementById('orderPrice').textContent = formatRp(product.price);
+    document.getElementById('orderTotal').textContent = formatRp(product.price);
+
+    // Fields
+    fields = checkoutPage.fields_config || [];
+    const enabledFields = fields.filter(f => f.enabled);
+    document.getElementById('formFields').innerHTML = enabledFields.map(f => `
+      <div class="co-group">
+        <input type="${f.key==='email'?'email':f.key==='wa'?'tel':'text'}"
+               class="co-input"
+               id="field-${f.key}"
+               placeholder="${f.label}${f.required?' *':''}"
+               autocomplete="${f.key==='nama'?'name':f.key==='wa'?'tel':f.key==='email'?'email':f.key==='alamat'?'street-address':'off'}">
+        <div class="field-error" id="err-${f.key}">${f.label} wajib diisi</div>
+      </div>`).join('');
+
+    // Button
+    document.getElementById('btnText').textContent = checkoutPage.button_text || 'Beli Sekarang';
+    document.getElementById('btnSubmit').style.background = checkoutPage.button_color || '#F59E0B';
+  }
+
+  function getFieldVal(key) {
+    const el = document.getElementById('field-' + key);
+    return el ? el.value.trim() : '';
+  }
+
+  function validateForm() {
+    let valid = true;
+    const enabledFields = fields.filter(f => f.enabled);
+    enabledFields.forEach(f => {
+      const val = getFieldVal(f.key);
+      const errEl = document.getElementById('err-' + f.key);
+      const inputEl = document.getElementById('field-' + f.key);
+      if (f.required && !val) {
+        if (errEl) errEl.style.display = 'block';
+        if (inputEl) inputEl.classList.add('error');
+        valid = false;
+      } else {
+        if (errEl) errEl.style.display = 'none';
+        if (inputEl) inputEl.classList.remove('error');
+      }
+    });
+    return valid;
+  }
+
+  async function submitOrder() {
+    if (!validateForm()) { return; }
+
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true;
+
+    const eventId = genEventId();
+    const customerName    = getFieldVal('nama');
+    const customerWA      = getFieldVal('wa');
+    const customerEmail   = getFieldVal('email');
+    const customerAddress = getFieldVal('alamat');
+    const customerCity    = getFieldVal('kota');
+    const customerNote    = getFieldVal('catatan');
+
+    // Pick CS (round-robin)
+    const cs = assignedCS.length > 0 ? assignedCS[rotatorIndex % assignedCS.length] : null;
+
+    try {
+      // 1. Save order to Supabase
+      const orderRes = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+        method: 'POST',
+        headers: { ...sbH, 'Prefer': 'return=representation' },
+        body: JSON.stringify({
+          checkout_page_id: checkoutPage.id,
+          product_id:       product.id,
+          cs_id:            cs?.id || null,
+          customer_name:    customerName,
+          customer_wa:      normalizeWA(customerWA),
+          customer_email:   customerEmail || null,
+          customer_address: customerAddress || null,
+          customer_city:    customerCity || null,
+          customer_note:    customerNote || null,
+          status:           'pending',
+        }),
+      });
+      const orderData = await orderRes.json();
+      const orderId = orderData[0]?.id;
+
+      // 2. Update CS rotator
+      if (assignedCS.length > 1) {
+        const newIndex = (rotatorIndex + 1) % assignedCS.length;
+        await fetch(`${SUPABASE_URL}/rest/v1/cs_rotator?product_id=eq.${product.id}`, {
+          method: 'PATCH',
+          headers: { ...sbH, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ last_cs_index: newIndex }),
+        });
+      }
+
+      // 3. Send CAPI event (Lead) via Edge Function
+      if (product.pixel_id && product.access_token) {
+        fetch(`${API_URL}/send-capi`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pixel_id:      product.pixel_id,
+            access_token:  product.access_token,
+            event_name:    'Lead',
+            event_id:      eventId,
+            event_time:    Math.floor(Date.now() / 1000),
+            user_data: {
+              ph:    normalizeWA(customerWA),
+              em:    customerEmail || null,
+              fn:    customerName?.split(' ')[0]?.toLowerCase() || null,
+              ln:    customerName?.split(' ').slice(1).join(' ')?.toLowerCase() || null,
+              ct:    customerCity?.toLowerCase().replace(/\s/g, '') || null,
+              country: 'id',
+            },
+            custom_data: {
+              product_name: product.name,
+              order_id:     orderId,
+              value:        product.price,
+              currency:     'IDR',
+            },
+            event_source_url: window.location.href,
+          }),
+        }).catch(e => console.warn('CAPI error:', e));
+      }
+
+      // 4. Fire browser pixel Lead event (for dedup)
+      if (window.fbq && product.pixel_id) {
+        fbq('track', 'Lead', { value: product.price, currency: 'IDR' }, { eventID: eventId });
+      }
+
+      // 5. Send email notif to CS (via Edge Function)
+      if (cs?.email) {
+        fetch(`${API_URL}/send-order-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to:             cs.email,
+            cs_name:        cs.name,
+            customer_name:  customerName,
+            customer_wa:    normalizeWA(customerWA),
+            customer_address: customerAddress,
+            customer_city:  customerCity,
+            product_name:   product.name,
+            order_id:       orderId,
+          }),
+        }).catch(e => console.warn('Email error:', e));
+      }
+
+      // 6. Redirect ke WA CS
+      if (cs) {
+        const redirectTemplate = product.followup_redirect || 'Halo, saya {{name}} ingin order {{product}}\n\nNama     : {{name}}\nNo. WA   : {{phone}}\nAlamat   : {{address}}';
+        const msg = redirectTemplate
+          .replace(/\{\{name\}\}/gi,    customerName)
+          .replace(/\{\{phone\}\}/gi,   normalizeWA(customerWA))
+          .replace(/\{\{address\}\}/gi, [customerAddress, customerCity].filter(Boolean).join(', '))
+          .replace(/\{\{product\}\}/gi, product.name);
+
+        const waUrl = `https://wa.me/${normalizeWA(cs.wa_number)}?text=${encodeURIComponent(msg)}`;
+        setTimeout(() => { window.location.href = waUrl; }, 500);
+      }
+
+    } catch(e) {
+      console.error(e);
+      btn.disabled = false;
+      alert('Terjadi kesalahan, coba lagi.');
+    }
+  }
+
+  // Show loading spinner initially
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  init();
+</script>
+</body>
+</html>

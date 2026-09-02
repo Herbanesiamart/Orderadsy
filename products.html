@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products — OrderAdsy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .product-name-cell { display:flex; align-items:center; gap:12px; }
+  .product-actions a, .product-actions button {
+    font-size:12px; color:var(--primary); background:none; border:none;
+    cursor:pointer; padding:0; text-decoration:underline;
+  }
+  .product-actions button.del { color:var(--red); }
+</style>
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+<div id="toast"></div>
+
+<div class="page-content">
+  <div class="page-header">
+    <div class="page-title">Products</div>
+    <div class="flex gap-8">
+      <input type="text" class="form-control" id="searchInput" placeholder="Cari produk..." style="width:220px;" oninput="filterProducts()">
+      <a href="products-add.html" class="btn btn-accent">＋ Add Product</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px;"><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Orders</th>
+            <th>Closing</th>
+            <th>Closing Rate</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="productTable">
+          <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--gray-400);">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  requireAuth();
+  renderNavbar('products');
+
+  let allProducts = [];
+
+  async function loadProducts() {
+    try {
+      const products = await sbGet('products', '?order=created_at.desc&select=*');
+      allProducts = products;
+
+      // Load order stats per product
+      const orderStats = await sbGet('orders', '?select=product_id,status').catch(() => []);
+      const statsMap = {};
+      orderStats.forEach(o => {
+        if (!statsMap[o.product_id]) statsMap[o.product_id] = { total: 0, closing: 0 };
+        statsMap[o.product_id].total++;
+        if (o.status === 'closing') statsMap[o.product_id].closing++;
+      });
+
+      allProducts = products.map(p => ({
+        ...p,
+        _total: statsMap[p.id]?.total || 0,
+        _closing: statsMap[p.id]?.closing || 0,
+      }));
+
+      renderTable(allProducts);
+    } catch(e) {
+      document.getElementById('productTable').innerHTML =
+        `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--red);">Gagal load: ${e.message}</td></tr>`;
+    }
+  }
+
+  function renderTable(products) {
+    const tbody = document.getElementById('productTable');
+    if (!products.length) {
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-state-icon">📦</div><div class="empty-state-text">Belum ada produk. <a href="products-add.html">Tambah sekarang</a></div></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = products.map(p => {
+      const rate = p._total > 0 ? Math.round(p._closing / p._total * 100) : 0;
+      const thumb = p.image_url
+        ? `<img src="${p.image_url}" class="product-thumb" alt="">`
+        : `<div class="product-thumb-placeholder">📦</div>`;
+      return `
+        <tr>
+          <td><input type="checkbox" class="row-check" data-id="${p.id}"></td>
+          <td>
+            <div class="product-name-cell">
+              ${thumb}
+              <div>
+                <div style="font-weight:600;">${p.name}</div>
+                <div class="product-actions">
+                  <a href="products-detail.html?id=${p.id}">Detail</a>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td>${formatRp(p.price)}</td>
+          <td>${p._total}</td>
+          <td>${p._closing}</td>
+          <td>${rate}%</td>
+          <td><span class="badge ${p.status==='active'?'badge-green':'badge-gray'}">${p.status==='active'?'Active':'Inactive'}</span></td>
+          <td>
+            <div class="flex gap-8 items-center">
+              <a href="products-detail.html?id=${p.id}" class="btn btn-outline btn-sm">Detail</a>
+              <button class="btn btn-outline btn-sm" onclick="deleteProduct('${p.id}','${p.name.replace(/'/g,"\\'")}')">Hapus</button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  function filterProducts() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    renderTable(allProducts.filter(p => p.name.toLowerCase().includes(q)));
+  }
+
+  function toggleAll(cb) {
+    document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
+  }
+
+  async function deleteProduct(id, name) {
+    if (!confirm(`Hapus produk "${name}"? Semua data terkait akan dihapus.`)) return;
+    try {
+      await sbDelete('products', `?id=eq.${id}`);
+      showToast('Produk dihapus', 'success');
+      loadProducts();
+    } catch(e) {
+      showToast('Gagal hapus: ' + e.message, 'error');
+    }
+  }
+
+  loadProducts();
+</script>
+</body>
+</html>

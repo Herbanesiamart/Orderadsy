@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Product — OrderAdsy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .wizard-wrap { display:grid; grid-template-columns:1fr 420px; gap:24px; align-items:start; }
+  @media (max-width:900px) { .wizard-wrap { grid-template-columns:1fr; } }
+
+  /* Preview */
+  .preview-card {
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    position: sticky;
+    top: 76px;
+  }
+  .preview-tabs { display:flex; border-bottom:1px solid var(--gray-200); }
+  .preview-tab {
+    flex:1; padding:10px; text-align:center; font-size:12px; font-weight:600;
+    cursor:pointer; color:var(--gray-400); border-bottom:2px solid transparent; margin-bottom:-1px;
+  }
+  .preview-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+  .checkout-preview {
+    padding: 16px;
+    min-height: 460px;
+    background: #f8f9fb;
+  }
+  .preview-inner {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .preview-trust { display:flex; gap:12px; margin-bottom:14px; font-size:11px; color:var(--gray-400); }
+  .preview-trust-item { display:flex; align-items:center; gap:4px; }
+  .preview-benefits { margin-bottom:14px; }
+  .preview-benefit { font-size:12px; color:var(--gray-700); display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+  .preview-field {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size:12px;
+    color: var(--gray-400);
+    margin-bottom:8px;
+  }
+  .preview-btn {
+    width:100%; padding:12px; border-radius:var(--radius-sm);
+    font-size:14px; font-weight:700; color:var(--white);
+    border:none; cursor:default; margin-top:8px;
+  }
+  .preview-section { margin-bottom:14px; }
+  .preview-label { font-size:12px; font-weight:700; color:var(--gray-700); margin-bottom:6px; border-bottom:1px solid var(--gray-200); padding-bottom:4px; }
+  .preview-order-row { display:flex; justify-content:space-between; font-size:12px; color:var(--gray-600); margin-bottom:4px; }
+  .preview-product-img { width:100%; height:100px; object-fit:cover; border-radius:var(--radius-sm); margin-bottom:10px; background:var(--gray-100); display:flex; align-items:center; justify-content:center; color:var(--gray-300); font-size:32px; }
+
+  .cs-item {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border:1px solid var(--gray-200);
+    border-radius:var(--radius-sm); margin-bottom:8px; cursor:pointer;
+    transition:all 0.15s;
+  }
+  .cs-item:hover { border-color:var(--primary); background:var(--primary-light); }
+  .cs-item.selected { border-color:var(--primary); background:var(--primary-light); }
+  .cs-item input[type=checkbox] { width:16px; height:16px; cursor:pointer; }
+  .cs-avatar { width:36px; height:36px; border-radius:50%; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; }
+</style>
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+<div id="toast"></div>
+
+<div class="page-content">
+  <a href="products.html" class="back-link">← Kembali ke Products</a>
+
+  <!-- Stepper -->
+  <div class="stepper" id="stepper">
+    <div class="step active" id="s1"><div class="step-num">1</div> Product Info</div>
+    <div class="step-line" id="l1"></div>
+    <div class="step" id="s2"><div class="step-num">2</div> Assign CS</div>
+    <div class="step-line" id="l2"></div>
+    <div class="step" id="s3"><div class="step-num">3</div> Selesai</div>
+  </div>
+
+  <div class="wizard-wrap">
+    <!-- LEFT: Form -->
+    <div>
+      <!-- Step 1 -->
+      <div id="step1">
+        <div class="card card-body mb-16">
+          <div class="section-title mb-16">⚙️ Informasi Produk</div>
+          <div class="form-group">
+            <label class="form-label">Nama Produk <span class="req">*</span></label>
+            <input type="text" class="form-control" id="pName" placeholder="Contoh: Serum Vitamin C 30ml" oninput="updateSlug();updatePreview()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Checkout Page URL</label>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <span style="color:var(--gray-400);font-size:13px;">/</span>
+              <input type="text" class="form-control" id="pSlug" placeholder="serum-vitamin-c">
+              <div class="form-hint" id="slugHint"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Harga (Rp)</label>
+            <input type="number" class="form-control" id="pPrice" placeholder="0" oninput="updatePreview()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Deskripsi / Benefit (satu per baris)</label>
+            <textarea class="form-control" id="pDesc" placeholder="Kulit cerah dalam 7 hari&#10;Formula BPOM&#10;Free ongkir" oninput="updatePreview()"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status Produk</label>
+            <select class="form-control" id="pStatus">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card card-body mb-16">
+          <div class="section-title mb-16">🖼️ Gambar Produk</div>
+          <div class="upload-area" id="uploadArea" onclick="document.getElementById('imgInput').click()">
+            <input type="file" id="imgInput" accept="image/*" onchange="handleImageUpload(this)">
+            <div id="uploadPlaceholder">
+              <div style="font-size:36px;margin-bottom:8px;">📷</div>
+              <div style="font-size:13px;color:var(--gray-400);">Klik untuk upload gambar produk</div>
+              <div style="font-size:11px;color:var(--gray-300);margin-top:4px;">JPG, PNG, max 2MB</div>
+            </div>
+            <img id="imgPreview" src="" alt="" style="display:none;max-height:160px;border-radius:var(--radius-sm);">
+          </div>
+        </div>
+
+        <div class="card card-body mb-16">
+          <div class="section-title mb-16">📡 Meta Pixel & CAPI</div>
+          <div class="form-group">
+            <label class="form-label">Facebook Pixel ID</label>
+            <input type="text" class="form-control" id="pPixelId" placeholder="123456789012345">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Access Token CAPI</label>
+            <input type="text" class="form-control" id="pAccessToken" placeholder="EAAxxxxxxxx..." autocomplete="off">
+            <div class="form-hint">Didapat dari Meta Events Manager → Data Sources → Settings → Generate Access Token</div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;">
+          <button class="btn btn-primary" onclick="goToStep2()">Lanjut: Assign CS →</button>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div id="step2" style="display:none;">
+        <div class="card card-body mb-16">
+          <div class="section-title mb-4">👥 Assign CS ke Produk</div>
+          <div class="form-hint mb-16">Pilih minimal 1 CS. Jika lebih dari 1, order akan dirotasi otomatis (round-robin).</div>
+          <div id="csList">
+            <div style="text-align:center;padding:24px;color:var(--gray-400);">Loading CS...</div>
+          </div>
+          <a href="others-cs.html" target="_blank" style="font-size:12px;color:var(--primary);">＋ Tambah CS baru</a>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;">
+          <button class="btn btn-outline" onclick="goToStep1()">← Kembali</button>
+          <button class="btn btn-primary" onclick="saveProduct()">Simpan & Selesai ✓</button>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div id="step3" style="display:none;">
+        <div class="card card-body" style="text-align:center;padding:48px;">
+          <div style="font-size:56px;margin-bottom:16px;">🎉</div>
+          <div style="font-size:20px;font-weight:700;color:var(--gray-800);margin-bottom:8px;">Produk Berhasil Dibuat!</div>
+          <div style="color:var(--gray-500);margin-bottom:24px;" id="savedProductName"></div>
+          <div class="flex gap-8 items-center" style="justify-content:center;flex-wrap:wrap;">
+            <a id="btnDetail" href="#" class="btn btn-primary">Lihat Detail Produk →</a>
+            <a href="products-add.html" class="btn btn-outline">Tambah Produk Lain</a>
+            <a href="products.html" class="btn btn-outline">Ke Daftar Produk</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Preview -->
+    <div class="preview-card">
+      <div class="preview-tabs">
+        <div class="preview-tab active" onclick="setPreviewTab('desktop',this)">🖥 Desktop</div>
+        <div class="preview-tab" onclick="setPreviewTab('mobile',this)">📱 Mobile</div>
+      </div>
+      <div class="checkout-preview">
+        <div class="preview-inner">
+          <div class="preview-trust">
+            <div class="preview-trust-item">🔒 Transaksi Aman</div>
+            <div class="preview-trust-item">👍 Jaminan Kepuasan</div>
+          </div>
+          <div id="previewImg" class="preview-product-img">📦</div>
+          <div class="preview-benefits" id="previewBenefits">
+            <div style="font-size:12px;font-weight:700;color:var(--gray-700);margin-bottom:6px;">Yang Anda Dapatkan:</div>
+            <div class="preview-benefit">✅ Fitur Satu</div>
+            <div class="preview-benefit">✅ Fitur Dua</div>
+          </div>
+          <div class="preview-label">Data Penerima:</div>
+          <div class="preview-field">Nama Anda</div>
+          <div class="preview-field">No. WhatsApp Anda</div>
+          <div class="preview-field">Alamat Lengkap Anda</div>
+          <div class="preview-field">Kota / Kecamatan</div>
+          <div class="preview-section">
+            <div class="preview-label">Rincian Pesanan:</div>
+            <div class="preview-order-row"><span id="previewProdName">Nama Produk</span><span id="previewPrice">Rp0</span></div>
+          </div>
+          <button class="preview-btn" id="previewBtn" style="background:var(--accent);">Beli Sekarang ⊙</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  requireAuth();
+  renderNavbar('products');
+
+  let savedProductId = null;
+  let uploadedImageUrl = null;
+
+  // ── Slug generator ──
+  function updateSlug() {
+    const name = document.getElementById('pName').value;
+    const slug = name.toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .trim();
+    document.getElementById('pSlug').value = slug;
+  }
+
+  // ── Preview update ──
+  function updatePreview() {
+    const name  = document.getElementById('pName').value || 'Nama Produk';
+    const price = parseInt(document.getElementById('pPrice').value) || 0;
+    const desc  = document.getElementById('pDesc').value;
+
+    document.getElementById('previewProdName').textContent = name;
+    document.getElementById('previewPrice').textContent = formatRp(price);
+
+    const benefits = desc.split('\n').filter(l => l.trim());
+    if (benefits.length) {
+      document.getElementById('previewBenefits').innerHTML =
+        '<div style="font-size:12px;font-weight:700;color:var(--gray-700);margin-bottom:6px;">Yang Anda Dapatkan:</div>' +
+        benefits.map(b => `<div class="preview-benefit">✅ ${b.trim()}</div>`).join('');
+    }
+  }
+
+  function setPreviewTab(tab, el) {
+    document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  // ── Image upload ──
+  function handleImageUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { showToast('Gambar max 2MB', 'error'); return; }
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      const url = e.target.result;
+      uploadedImageUrl = url; // Base64 — in production upload to Supabase Storage
+      document.getElementById('uploadPlaceholder').style.display = 'none';
+      const img = document.getElementById('imgPreview');
+      img.src = url; img.style.display = 'block';
+      document.getElementById('previewImg').innerHTML = `<img src="${url}" style="width:100%;height:100px;object-fit:cover;border-radius:var(--radius-sm);">`;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── Step navigation ──
+  function updateStepper(step) {
+    for (let i = 1; i <= 3; i++) {
+      const s = document.getElementById('s' + i);
+      s.className = 'step ' + (i < step ? 'done' : i === step ? 'active' : '');
+    }
+    for (let i = 1; i <= 2; i++) {
+      document.getElementById('l' + i).className = 'step-line ' + (i < step ? 'done' : '');
+    }
+  }
+
+  function goToStep1() {
+    document.getElementById('step1').style.display = '';
+    document.getElementById('step2').style.display = 'none';
+    updateStepper(1);
+  }
+
+  async function goToStep2() {
+    const name = document.getElementById('pName').value.trim();
+    const slug = document.getElementById('pSlug').value.trim();
+    if (!name) { showToast('Nama produk wajib diisi', 'error'); return; }
+    if (!slug) { showToast('URL slug wajib diisi', 'error'); return; }
+
+    document.getElementById('step1').style.display = 'none';
+    document.getElementById('step2').style.display = '';
+    updateStepper(2);
+    loadCSList();
+  }
+
+  let allCS = [];
+  let selectedCS = new Set();
+
+  async function loadCSList() {
+    try {
+      allCS = await sbGet('cs_team', '?is_active=eq.true&order=name.asc');
+      const el = document.getElementById('csList');
+      if (!allCS.length) {
+        el.innerHTML = `<div style="text-align:center;padding:24px;color:var(--gray-400);">Belum ada CS. <a href="others-cs.html" target="_blank">Tambah CS dulu</a></div>`;
+        return;
+      }
+      el.innerHTML = allCS.map(cs => `
+        <div class="cs-item" id="csItem-${cs.id}" onclick="toggleCS('${cs.id}')">
+          <input type="checkbox" id="csCheck-${cs.id}" onchange="toggleCS('${cs.id}')">
+          <div class="cs-avatar">${cs.name[0].toUpperCase()}</div>
+          <div>
+            <div style="font-weight:600;font-size:13px;">${cs.name}</div>
+            <div style="font-size:11px;color:var(--gray-400);">${cs.wa_number}</div>
+          </div>
+        </div>`).join('');
+    } catch(e) {
+      document.getElementById('csList').innerHTML = `<div style="color:var(--red);">Gagal load CS: ${e.message}</div>`;
+    }
+  }
+
+  function toggleCS(id) {
+    if (selectedCS.has(id)) {
+      selectedCS.delete(id);
+      document.getElementById('csItem-' + id).classList.remove('selected');
+      document.getElementById('csCheck-' + id).checked = false;
+    } else {
+      selectedCS.add(id);
+      document.getElementById('csItem-' + id).classList.add('selected');
+      document.getElementById('csCheck-' + id).checked = true;
+    }
+  }
+
+  async function saveProduct() {
+    if (selectedCS.size === 0) { showToast('Pilih minimal 1 CS', 'error'); return; }
+
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+
+    try {
+      const slug = document.getElementById('pSlug').value.trim();
+
+      // Save product
+      const result = await sbPost('products', {
+        name:          document.getElementById('pName').value.trim(),
+        slug,
+        image_url:     uploadedImageUrl || null,
+        price:         parseInt(document.getElementById('pPrice').value) || 0,
+        description:   document.getElementById('pDesc').value.trim() || null,
+        status:        document.getElementById('pStatus').value,
+        pixel_id:      document.getElementById('pPixelId').value.trim() || null,
+        access_token:  document.getElementById('pAccessToken').value.trim() || null,
+      });
+
+      const productId = result[0].id;
+      savedProductId = productId;
+
+      // Save CS assignments
+      const csAssignments = [...selectedCS].map(csId => ({ product_id: productId, cs_id: csId }));
+      await sbPost('product_cs', csAssignments);
+
+      // Init rotator
+      await sbPost('cs_rotator', { product_id: productId, last_cs_index: 0 });
+
+      // Step 3
+      document.getElementById('step2').style.display = 'none';
+      document.getElementById('step3').style.display = '';
+      document.getElementById('savedProductName').textContent = document.getElementById('pName').value.trim();
+      document.getElementById('btnDetail').href = 'products-detail.html?id=' + productId;
+      updateStepper(3);
+
+    } catch(e) {
+      showToast('Gagal simpan: ' + e.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Simpan & Selesai ✓';
+    }
+  }
+</script>
+</body>
+</html>

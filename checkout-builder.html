@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout Builder — OrderAdsy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .builder-wrap { display:grid; grid-template-columns:1fr 380px; gap:24px; align-items:start; }
+  @media (max-width:900px) { .builder-wrap { grid-template-columns:1fr; } }
+
+  .field-row {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border:1px solid var(--gray-200);
+    border-radius:var(--radius-sm); margin-bottom:8px;
+    background:var(--white);
+  }
+  .field-row.disabled { background:var(--gray-50); opacity:0.6; }
+  .field-drag { cursor:grab; color:var(--gray-300); font-size:16px; }
+  .field-label { flex:1; font-size:13px; font-weight:500; }
+  .req-badge { font-size:10px; color:var(--red); font-weight:700; margin-left:4px; }
+
+  .preview-card {
+    background:var(--white); border-radius:var(--radius-lg);
+    border:1px solid var(--gray-200); box-shadow:var(--shadow-md);
+    overflow:hidden; position:sticky; top:76px;
+  }
+  .preview-inner-wrap { padding:16px; background:#f8f9fb; }
+  .checkout-form-preview {
+    background:var(--white); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow);
+  }
+  .preview-trust { display:flex; gap:12px; margin-bottom:14px; font-size:11px; color:var(--gray-400); }
+  .preview-field {
+    background:var(--gray-50); border:1px solid var(--gray-200);
+    border-radius:var(--radius-sm); padding:10px 12px;
+    font-size:12px; color:var(--gray-400); margin-bottom:8px;
+  }
+  .preview-btn {
+    width:100%; padding:12px; border-radius:var(--radius-sm);
+    font-size:14px; font-weight:700; color:var(--white);
+    border:none; cursor:default; margin-top:8px;
+    transition:background 0.15s;
+  }
+  .preview-order-box {
+    border:1px solid var(--gray-200); border-radius:var(--radius-sm);
+    padding:10px; margin-bottom:8px; font-size:12px;
+  }
+  .preview-order-row { display:flex; justify-content:space-between; color:var(--gray-600); margin-bottom:4px; }
+</style>
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+<div id="toast"></div>
+
+<div class="page-content">
+  <a id="backLink" href="#" class="back-link">← Kembali ke Product Detail</a>
+  <div class="page-header">
+    <div class="page-title" id="pageTitle">Checkout Builder</div>
+    <div class="flex gap-8">
+      <a id="viewBtn" href="#" target="_blank" class="btn btn-outline">👁 Preview Form</a>
+      <button class="btn btn-primary" onclick="saveAll()">💾 Simpan Semua</button>
+    </div>
+  </div>
+
+  <div class="builder-wrap">
+    <!-- LEFT -->
+    <div>
+      <!-- Nama page -->
+      <div class="card card-body mb-16">
+        <div class="section-title mb-12">📄 Nama Checkout Page</div>
+        <div class="form-group" style="margin:0">
+          <input type="text" class="form-control" id="pageName" placeholder="Checkout Page 1">
+        </div>
+      </div>
+
+      <!-- Fields -->
+      <div class="card card-body mb-16">
+        <div class="flex items-center justify-between mb-12">
+          <div class="section-title">📋 Requested Fields</div>
+          <div style="font-size:12px;color:var(--gray-400);">Drag untuk urutkan</div>
+        </div>
+        <div id="fieldsList"></div>
+      </div>
+
+      <!-- Buy Button -->
+      <div class="card card-body mb-16">
+        <div class="section-title mb-12">👆 Buy Button</div>
+        <div class="form-group">
+          <label class="form-label">Teks Tombol</label>
+          <input type="text" class="form-control" id="btnText" value="Beli Sekarang" oninput="updatePreview()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Warna Tombol</label>
+          <div class="color-swatches">
+            <div class="color-swatch selected" style="background:#F59E0B;" onclick="setColor('#F59E0B',this)" title="Orange"></div>
+            <div class="color-swatch" style="background:#2563EB;" onclick="setColor('#2563EB',this)" title="Blue"></div>
+            <div class="color-swatch" style="background:#10B981;" onclick="setColor('#10B981',this)" title="Green"></div>
+            <div class="color-swatch" style="background:#EF4444;" onclick="setColor('#EF4444',this)" title="Red"></div>
+            <div class="color-swatch" style="background:#8B5CF6;" onclick="setColor('#8B5CF6',this)" title="Purple"></div>
+            <div class="color-swatch" style="background:#1F2937;" onclick="setColor('#1F2937',this)" title="Dark"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tracking -->
+      <div class="card card-body mb-16">
+        <div class="section-title mb-4">📡 Tracking</div>
+        <div style="font-size:13px;color:var(--gray-500);margin-bottom:16px;">Pixel ID & Access Token diatur di tab Pixel & CAPI pada Product Detail.</div>
+        <div style="background:var(--green-light);border:1px solid #A7F3D0;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--green);">
+          ✅ <strong>ViewContent</strong> — saat halaman checkout dibuka<br>
+          ✅ <strong>Lead</strong> — saat customer submit form (via CAPI server-side)
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="btn btn-primary btn-lg" onclick="saveAll()">💾 Simpan Semua</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: Preview -->
+    <div class="preview-card">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--gray-200);font-size:12px;font-weight:600;color:var(--gray-500);">PREVIEW</div>
+      <div class="preview-inner-wrap">
+        <div class="checkout-form-preview">
+          <div class="preview-trust">
+            <span>🔒 Transaksi Aman</span>
+            <span>👍 Jaminan Kepuasan</span>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">Data Penerima:</div>
+          <div id="previewFields"></div>
+          <div class="preview-order-box" id="previewOrder">
+            <div class="preview-order-row"><span>Produk</span><span id="previewPrice">Rp0</span></div>
+          </div>
+          <button class="preview-btn" id="previewBtn" style="background:#F59E0B;">Beli Sekarang ⊙</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  requireAuth();
+  renderNavbar('products');
+
+  const params = new URLSearchParams(location.search);
+  const pageId = params.get('id');
+  if (!pageId) window.location.href = 'products.html';
+
+  let checkoutPage = null;
+  let product = null;
+  let fields = [];
+  let btnColor = '#F59E0B';
+
+  async function loadPage() {
+    try {
+      const rows = await sbGet('checkout_pages', `?id=eq.${pageId}&select=*,products(id,name,slug,price,pixel_id,access_token)&limit=1`);
+      if (!rows.length) { alert('Checkout page tidak ditemukan'); return; }
+      checkoutPage = rows[0];
+      product = checkoutPage.products;
+
+      document.getElementById('pageTitle').textContent = checkoutPage.name;
+      document.getElementById('pageName').value = checkoutPage.name;
+      document.getElementById('backLink').href = 'products-detail.html?id=' + product.id;
+      document.getElementById('viewBtn').href = 'checkout.html?slug=' + product.slug + '&page=' + pageId;
+
+      fields = checkoutPage.fields_config || getDefaultFields();
+      btnColor = checkoutPage.button_color || '#F59E0B';
+      document.getElementById('btnText').value = checkoutPage.button_text || 'Beli Sekarang';
+
+      // Set color swatch
+      document.querySelectorAll('.color-swatch').forEach(s => {
+        s.classList.toggle('selected', s.getAttribute('onclick').includes(btnColor));
+      });
+
+      renderFields();
+      updatePreview();
+    } catch(e) {
+      showToast('Gagal load: ' + e.message, 'error');
+    }
+  }
+
+  function getDefaultFields() {
+    return [
+      { key:'nama',   label:'Nama',              required:true,  enabled:true },
+      { key:'wa',     label:'No. WhatsApp',       required:true,  enabled:true },
+      { key:'email',  label:'Email',              required:false, enabled:false },
+      { key:'alamat', label:'Alamat Lengkap',     required:true,  enabled:true },
+      { key:'kota',   label:'Kota / Kecamatan',   required:true,  enabled:true },
+      { key:'catatan',label:'Catatan',            required:false, enabled:false },
+    ];
+  }
+
+  function renderFields() {
+    const el = document.getElementById('fieldsList');
+    el.innerHTML = fields.map((f, i) => `
+      <div class="field-row ${f.enabled?'':'disabled'}" id="field-${i}">
+        <span class="field-drag">⠿</span>
+        <div class="toggle ${f.enabled?'on':''}" onclick="toggleField(${i})"></div>
+        <div class="field-label">
+          ${f.label}
+          ${f.required ? '<span class="req-badge">WAJIB</span>' : ''}
+        </div>
+        ${!f.required ? `<button onclick="toggleRequired(${i})" style="font-size:11px;color:var(--gray-400);background:none;border:none;cursor:pointer;">${f.required?'Wajib':'Opsional'}</button>` : ''}
+      </div>`).join('');
+    updatePreview();
+  }
+
+  function toggleField(i) {
+    if (fields[i].required) return; // required fields can't be disabled
+    fields[i].enabled = !fields[i].enabled;
+    renderFields();
+  }
+
+  function toggleRequired(i) {
+    fields[i].required = !fields[i].required;
+    renderFields();
+  }
+
+  function setColor(color, el) {
+    btnColor = color;
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('previewBtn').style.background = color;
+  }
+
+  function updatePreview() {
+    const enabledFields = fields.filter(f => f.enabled);
+    document.getElementById('previewFields').innerHTML =
+      enabledFields.map(f => `<div class="preview-field">${f.label}${f.required?' *':''}</div>`).join('');
+    document.getElementById('previewBtn').textContent = (document.getElementById('btnText').value || 'Beli Sekarang') + ' ⊙';
+    document.getElementById('previewBtn').style.background = btnColor;
+    if (product) {
+      document.getElementById('previewPrice').textContent = formatRp(product.price);
+    }
+  }
+
+  async function saveAll() {
+    try {
+      await sbPatch('checkout_pages', `?id=eq.${pageId}`, {
+        name:          document.getElementById('pageName').value.trim() || 'Checkout Page',
+        fields_config: fields,
+        button_text:   document.getElementById('btnText').value.trim() || 'Beli Sekarang',
+        button_color:  btnColor,
+      });
+      showToast('Checkout page disimpan!', 'success');
+    } catch(e) {
+      showToast('Gagal simpan: ' + e.message, 'error');
+    }
+  }
+
+  loadPage();
+</script>
+</body>
+</html>

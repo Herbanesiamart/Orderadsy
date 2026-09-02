@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Detail — OrderAdsy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .detail-tabs { display:flex; gap:0; border-bottom:2px solid var(--gray-200); margin-bottom:24px; overflow-x:auto; }
+  .detail-tab {
+    padding:10px 20px; border:none; background:none; cursor:pointer;
+    font-size:13.5px; font-weight:500; color:var(--gray-500);
+    border-bottom:2px solid transparent; margin-bottom:-2px; white-space:nowrap;
+  }
+  .detail-tab:hover { color:var(--gray-700); }
+  .detail-tab.active { color:var(--primary); border-bottom-color:var(--primary); font-weight:700; }
+
+  .funnel-wrap { display:flex; align-items:center; justify-content:center; gap:0; padding:24px 0; flex-wrap:wrap; }
+  .funnel-item { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:110px; }
+  .funnel-icon { font-size:28px; color:var(--accent); }
+  .funnel-label { font-size:11px; color:var(--gray-500); font-weight:500; text-align:center; }
+  .funnel-value { font-size:22px; font-weight:700; color:var(--gray-800); }
+  .funnel-arrow { display:flex; flex-direction:column; align-items:center; gap:4px; margin:0 4px; }
+  .funnel-pct { background:var(--primary); color:var(--white); font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; }
+
+  /* Follow-up text editor */
+  .followup-meta-select { display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+  .variable-chip {
+    padding:4px 10px; border:1px solid var(--gray-300); border-radius:999px;
+    font-size:12px; cursor:pointer; color:var(--gray-600); background:var(--white);
+    transition:all 0.15s;
+  }
+  .variable-chip:hover { border-color:var(--primary); color:var(--primary); background:var(--primary-light); }
+
+  .checkout-table th, .checkout-table td { font-size:13px; }
+
+  /* Edit modal */
+  .modal.wide { max-width:700px; }
+</style>
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+<div id="toast"></div>
+
+<div class="page-content">
+  <a href="products.html" class="back-link">← Kembali ke Products</a>
+
+  <div class="page-header" id="detailHeader">
+    <div class="page-title" id="productTitle">Loading...</div>
+    <div class="flex gap-8 flex-wrap">
+      <button class="btn btn-outline" onclick="openEditModal()">✏️ Edit Product</button>
+      <a id="btnViewCheckout" href="#" target="_blank" class="btn btn-outline">👁 Lihat Form</a>
+      <button class="btn btn-danger btn-sm" onclick="deleteThisProduct()">🗑 Hapus</button>
+    </div>
+  </div>
+
+  <!-- Detail Tabs -->
+  <div class="detail-tabs">
+    <button class="detail-tab active" onclick="showTab('stats',this)">📊 Statistik</button>
+    <button class="detail-tab" onclick="showTab('followup',this)">💬 Follow-up Text</button>
+    <button class="detail-tab" onclick="showTab('assignation',this)">👥 Assignation CS</button>
+    <button class="detail-tab" onclick="showTab('pixel',this)">📡 Pixel & CAPI</button>
+  </div>
+
+  <!-- Tab: Statistik -->
+  <div id="tab-stats">
+    <div class="card card-body mb-16">
+      <div class="funnel-wrap">
+        <div class="funnel-item">
+          <div class="funnel-icon">🏪</div>
+          <div class="funnel-label">Checkout Views</div>
+          <div class="funnel-value" id="fViews">0</div>
+        </div>
+        <div class="funnel-arrow">
+          <div class="funnel-pct" id="fPct1">0%</div>
+          <div style="font-size:20px;color:var(--primary);">→</div>
+        </div>
+        <div class="funnel-item">
+          <div class="funnel-icon">🛒</div>
+          <div class="funnel-label">Total Orders</div>
+          <div class="funnel-value" id="fOrders">0</div>
+        </div>
+        <div class="funnel-arrow">
+          <div class="funnel-pct" id="fPct2">0%</div>
+          <div style="font-size:20px;color:var(--primary);">→</div>
+        </div>
+        <div class="funnel-item">
+          <div class="funnel-icon">✅</div>
+          <div class="funnel-label">Closing</div>
+          <div class="funnel-value" id="fClosing">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Checkout pages table -->
+    <div class="card">
+      <div class="card-body" style="border-bottom:1px solid var(--gray-200);">
+        <div class="flex items-center justify-between">
+          <div class="section-title">Checkout Pages</div>
+          <button class="btn btn-primary" onclick="createCheckoutPage()">＋ Create Checkout Page</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="checkout-table">
+          <thead>
+            <tr>
+              <th>Nama</th>
+              <th>Views</th>
+              <th>Orders</th>
+              <th>Closing Rate</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="checkoutTable">
+            <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--gray-400);">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Follow-up Text -->
+  <div id="tab-followup" style="display:none;">
+    <div class="card card-body">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="setFollowupTab('welcome',this)">👋 Welcome</button>
+        <button class="tab-btn" onclick="setFollowupTab('redirect',this)">🔀 Redirect</button>
+      </div>
+
+      <!-- Welcome -->
+      <div id="fu-welcome">
+        <div style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">
+          Pesan yang CS kirim ke customer via WhatsApp setelah menerima notif order.
+        </div>
+        <div class="followup-meta-select">
+          <span style="font-size:12px;color:var(--gray-500);align-self:center;">Insert variabel:</span>
+          <button class="variable-chip" onclick="insertVar('fu-welcome-text','{{name}}')">{{name}}</button>
+          <button class="variable-chip" onclick="insertVar('fu-welcome-text','{{cs_name}}')">{{cs_name}}</button>
+          <button class="variable-chip" onclick="insertVar('fu-welcome-text','{{phone}}')">{{phone}}</button>
+          <button class="variable-chip" onclick="insertVar('fu-welcome-text','{{address}}')">{{address}}</button>
+          <button class="variable-chip" onclick="insertVar('fu-welcome-text','{{product}}')">{{product}}</button>
+        </div>
+        <textarea class="form-control" id="fu-welcome-text" style="min-height:180px;font-family:monospace;"></textarea>
+        <div class="flex gap-8 mt-8 items-center">
+          <button class="btn btn-primary" onclick="saveFollowup('welcome')">Simpan</button>
+          <button class="btn btn-outline" onclick="resetFollowup('welcome')">Reset Default</button>
+        </div>
+      </div>
+
+      <!-- Redirect -->
+      <div id="fu-redirect" style="display:none;">
+        <div style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">
+          Pesan otomatis yang muncul di WA customer saat redirect setelah submit form.
+        </div>
+        <div class="followup-meta-select">
+          <span style="font-size:12px;color:var(--gray-500);align-self:center;">Insert variabel:</span>
+          <button class="variable-chip" onclick="insertVar('fu-redirect-text','{{name}}')">{{name}}</button>
+          <button class="variable-chip" onclick="insertVar('fu-redirect-text','{{phone}}')">{{phone}}</button>
+          <button class="variable-chip" onclick="insertVar('fu-redirect-text','{{address}}')">{{address}}</button>
+          <button class="variable-chip" onclick="insertVar('fu-redirect-text','{{product}}')">{{product}}</button>
+        </div>
+        <textarea class="form-control" id="fu-redirect-text" style="min-height:180px;font-family:monospace;"></textarea>
+        <div class="flex gap-8 mt-8 items-center">
+          <button class="btn btn-primary" onclick="saveFollowup('redirect')">Simpan</button>
+          <button class="btn btn-outline" onclick="resetFollowup('redirect')">Reset Default</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab: Assignation CS -->
+  <div id="tab-assignation" style="display:none;">
+    <div class="card card-body">
+      <div class="section-title mb-4">👥 CS yang Di-assign ke Produk Ini</div>
+      <div class="form-hint mb-16">Jika lebih dari 1 CS, order dirotasi round-robin otomatis.</div>
+      <div id="assignCS"></div>
+      <hr class="divider">
+      <button class="btn btn-primary" onclick="saveAssignation()">Simpan Perubahan</button>
+    </div>
+  </div>
+
+  <!-- Tab: Pixel & CAPI -->
+  <div id="tab-pixel" style="display:none;">
+    <div class="card card-body">
+      <div class="section-title mb-16">📡 Tracking Meta Pixel + CAPI</div>
+      <div class="form-group">
+        <label class="form-label">Facebook Pixel ID</label>
+        <input type="text" class="form-control" id="editPixelId" placeholder="123456789012345">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Access Token CAPI</label>
+        <input type="text" class="form-control" id="editAccessToken" placeholder="EAAxxxxxxxx...">
+        <div class="form-hint">Meta Events Manager → Data Sources → Settings → Generate Access Token</div>
+      </div>
+      <div style="background:var(--green-light);border:1px solid #A7F3D0;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--green);margin-bottom:16px;">
+        ✅ Event yang dikirim: <strong>ViewContent</strong> (saat form dibuka) · <strong>Lead</strong> (saat customer submit)
+      </div>
+      <button class="btn btn-primary" onclick="savePixel()">Simpan Pixel Setting</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Product Modal -->
+<div class="modal-overlay hidden" id="editModal">
+  <div class="modal wide">
+    <div class="modal-header">
+      <div class="modal-title">Edit Product</div>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Nama Produk <span class="req">*</span></label>
+        <input type="text" class="form-control" id="editName">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Harga (Rp)</label>
+        <input type="number" class="form-control" id="editPrice">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Deskripsi / Benefit</label>
+        <textarea class="form-control" id="editDesc"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-control" id="editStatus">
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeEditModal()">Batal</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  requireAuth();
+  renderNavbar('products');
+
+  const params = new URLSearchParams(location.search);
+  const productId = params.get('id');
+  if (!productId) window.location.href = 'products.html';
+
+  let product = null;
+  let allCS = [];
+  let selectedCSIds = new Set();
+
+  async function loadProduct() {
+    try {
+      const rows = await sbGet('products', `?id=eq.${productId}&limit=1`);
+      if (!rows.length) { alert('Produk tidak ditemukan'); window.location.href = 'products.html'; return; }
+      product = rows[0];
+
+      document.getElementById('productTitle').textContent = product.name;
+      document.getElementById('btnViewCheckout').href = 'checkout.html?slug=' + product.slug;
+      document.getElementById('fu-welcome-text').value = product.followup_welcome || '';
+      document.getElementById('fu-redirect-text').value = product.followup_redirect || '';
+      document.getElementById('editPixelId').value = product.pixel_id || '';
+      document.getElementById('editAccessToken').value = product.access_token || '';
+
+      loadStats();
+      loadCheckoutPages();
+      loadAssignCS();
+    } catch(e) {
+      showToast('Gagal load produk: ' + e.message, 'error');
+    }
+  }
+
+  async function loadStats() {
+    const orders = await sbGet('orders', `?product_id=eq.${productId}&select=status`).catch(() => []);
+    const total   = orders.length;
+    const closing = orders.filter(o => o.status === 'closing').length;
+    document.getElementById('fViews').textContent   = total; // simplified
+    document.getElementById('fOrders').textContent  = total;
+    document.getElementById('fClosing').textContent = closing;
+    document.getElementById('fPct1').textContent = '100%';
+    document.getElementById('fPct2').textContent = total > 0 ? Math.round(closing/total*100)+'%' : '0%';
+  }
+
+  async function loadCheckoutPages() {
+    const pages = await sbGet('checkout_pages', `?product_id=eq.${productId}&order=created_at.asc`).catch(() => []);
+    const orders = await sbGet('orders', `?product_id=eq.${productId}&select=checkout_page_id,status`).catch(() => []);
+
+    const tbody = document.getElementById('checkoutTable');
+    if (!pages.length) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">📄</div><div class="empty-state-text">Belum ada checkout page. Klik "Create Checkout Page"</div></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = pages.map(p => {
+      const pgOrders  = orders.filter(o => o.checkout_page_id === p.id);
+      const pgClosing = pgOrders.filter(o => o.status === 'closing').length;
+      const rate = pgOrders.length > 0 ? Math.round(pgClosing/pgOrders.length*100) : 0;
+      return `
+        <tr>
+          <td><a href="checkout-builder.html?id=${p.id}" style="color:var(--primary);font-weight:600;">${p.name}</a></td>
+          <td>${pgOrders.length}</td>
+          <td>${pgOrders.length}</td>
+          <td>${rate}%</td>
+          <td>
+            <div class="flex gap-8">
+              <a href="checkout-builder.html?id=${p.id}" class="btn btn-outline btn-sm">Edit</a>
+              <a href="checkout.html?slug=${product.slug}&page=${p.id}" target="_blank" class="btn btn-outline btn-sm">View</a>
+              <button class="btn btn-outline btn-sm" onclick="deleteCheckoutPage('${p.id}','${p.name}')">Hapus</button>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  async function createCheckoutPage() {
+    const name = `Checkout Page ${Date.now().toString().slice(-4)}`;
+    try {
+      const result = await sbPost('checkout_pages', { product_id: productId, name });
+      const newId = result[0].id;
+      window.location.href = 'checkout-builder.html?id=' + newId;
+    } catch(e) {
+      showToast('Gagal buat checkout page: ' + e.message, 'error');
+    }
+  }
+
+  async function deleteCheckoutPage(id, name) {
+    if (!confirm(`Hapus "${name}"?`)) return;
+    await sbDelete('checkout_pages', `?id=eq.${id}`);
+    showToast('Checkout page dihapus', 'success');
+    loadCheckoutPages();
+  }
+
+  async function loadAssignCS() {
+    [allCS] = await Promise.all([
+      sbGet('cs_team', '?is_active=eq.true&order=name.asc'),
+    ]);
+    const assigned = await sbGet('product_cs', `?product_id=eq.${productId}&select=cs_id`).catch(() => []);
+    selectedCSIds = new Set(assigned.map(a => a.cs_id));
+
+    const el = document.getElementById('assignCS');
+    if (!allCS.length) { el.innerHTML = '<div style="color:var(--gray-400);">Belum ada CS. <a href="others-cs.html">Tambah CS</a></div>'; return; }
+    el.innerHTML = allCS.map(cs => `
+      <div class="cs-item ${selectedCSIds.has(cs.id)?'selected':''}" id="csItem-${cs.id}" onclick="toggleAssignCS('${cs.id}')">
+        <input type="checkbox" id="csChk-${cs.id}" ${selectedCSIds.has(cs.id)?'checked':''} onchange="toggleAssignCS('${cs.id}')">
+        <div class="cs-avatar">${cs.name[0].toUpperCase()}</div>
+        <div>
+          <div style="font-weight:600;font-size:13px;">${cs.name}</div>
+          <div style="font-size:11px;color:var(--gray-400);">${cs.wa_number}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  function toggleAssignCS(id) {
+    if (selectedCSIds.has(id)) { selectedCSIds.delete(id); document.getElementById('csItem-'+id).classList.remove('selected'); document.getElementById('csChk-'+id).checked = false; }
+    else { selectedCSIds.add(id); document.getElementById('csItem-'+id).classList.add('selected'); document.getElementById('csChk-'+id).checked = true; }
+  }
+
+  async function saveAssignation() {
+    if (selectedCSIds.size === 0) { showToast('Pilih minimal 1 CS', 'error'); return; }
+    try {
+      await sbDelete('product_cs', `?product_id=eq.${productId}`);
+      const assignments = [...selectedCSIds].map(id => ({ product_id: productId, cs_id: id }));
+      await sbPost('product_cs', assignments);
+      showToast('Assignasi CS disimpan', 'success');
+    } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
+  }
+
+  // ── Tab switching ──
+  function showTab(tab, el) {
+    ['stats','followup','assignation','pixel'].forEach(t => {
+      document.getElementById('tab-'+t).style.display = t === tab ? '' : 'none';
+    });
+    document.querySelectorAll('.detail-tab').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    if (tab === 'assignation') loadAssignCS();
+  }
+
+  function setFollowupTab(tab, el) {
+    document.getElementById('fu-welcome').style.display  = tab === 'welcome'  ? '' : 'none';
+    document.getElementById('fu-redirect').style.display = tab === 'redirect' ? '' : 'none';
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+  }
+
+  function insertVar(textareaId, variable) {
+    const ta = document.getElementById(textareaId);
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    ta.value = ta.value.slice(0, start) + variable + ta.value.slice(end);
+    ta.selectionStart = ta.selectionEnd = start + variable.length;
+    ta.focus();
+  }
+
+  async function saveFollowup(type) {
+    const field = type === 'welcome' ? 'followup_welcome' : 'followup_redirect';
+    const val   = document.getElementById(`fu-${type}-text`).value;
+    try {
+      await sbPatch('products', `?id=eq.${productId}`, { [field]: val });
+      showToast('Template disimpan', 'success');
+    } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
+  }
+
+  function resetFollowup(type) {
+    const defaults = {
+      welcome:  'Halo Kak {{name}}, saya {{cs_name}}. Terima kasih sudah order ya kak! Boleh kami konfirmasi datanya?\n\nNama     : {{name}}\nNo. WA   : {{phone}}\nAlamat   : {{address}}\n\nSudah benar ya kak? 😊',
+      redirect: 'Halo, saya {{name}} ingin order {{product}}\n\nNama     : {{name}}\nNo. WA   : {{phone}}\nAlamat   : {{address}}',
+    };
+    document.getElementById(`fu-${type}-text`).value = defaults[type];
+  }
+
+  async function savePixel() {
+    try {
+      await sbPatch('products', `?id=eq.${productId}`, {
+        pixel_id:     document.getElementById('editPixelId').value.trim() || null,
+        access_token: document.getElementById('editAccessToken').value.trim() || null,
+      });
+      showToast('Pixel setting disimpan', 'success');
+    } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
+  }
+
+  // ── Edit modal ──
+  function openEditModal() {
+    document.getElementById('editName').value   = product.name;
+    document.getElementById('editPrice').value  = product.price || '';
+    document.getElementById('editDesc').value   = product.description || '';
+    document.getElementById('editStatus').value = product.status;
+    document.getElementById('editModal').classList.remove('hidden');
+  }
+  function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); }
+  async function saveEdit() {
+    try {
+      await sbPatch('products', `?id=eq.${productId}`, {
+        name:        document.getElementById('editName').value.trim(),
+        price:       parseInt(document.getElementById('editPrice').value) || 0,
+        description: document.getElementById('editDesc').value.trim() || null,
+        status:      document.getElementById('editStatus').value,
+      });
+      showToast('Produk diperbarui', 'success');
+      closeEditModal();
+      loadProduct();
+    } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
+  }
+
+  async function deleteThisProduct() {
+    if (!confirm(`Hapus produk "${product.name}"?`)) return;
+    await sbDelete('products', `?id=eq.${productId}`);
+    window.location.href = 'products.html';
+  }
+
+  // ── cs-item style (shared) ──
+  const csStyle = document.createElement('style');
+  csStyle.textContent = `.cs-item { display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--gray-200);border-radius:var(--radius-sm);margin-bottom:8px;cursor:pointer;transition:all 0.15s; } .cs-item:hover,.cs-item.selected { border-color:var(--primary);background:var(--primary-light); } .cs-avatar { width:36px;height:36px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px; }`;
+  document.head.appendChild(csStyle);
+
+  loadProduct();
+</script>
+</body>
+</html>

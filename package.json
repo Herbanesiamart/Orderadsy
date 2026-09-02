@@ -1,0 +1,8 @@
+{
+  "name": "orderadsy",
+  "version": "1.0.0",
+  "description": "Order Management System for Meta Ads — Adsy",
+  "dependencies": {
+    "nodemailer": "^6.9.8"
+  }
+}

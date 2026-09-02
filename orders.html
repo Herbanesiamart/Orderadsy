@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orders — OrderAdsy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+<div id="toast"></div>
+
+<div class="page-content">
+  <div class="page-header">
+    <div class="page-title">Orders</div>
+    <div class="flex gap-8 flex-wrap">
+      <select class="form-control" id="filterStatus" style="width:150px;" onchange="loadOrders()">
+        <option value="">Semua Status</option>
+        <option value="pending">Pending</option>
+        <option value="closing">Closing</option>
+        <option value="cancel">Cancel</option>
+      </select>
+      <input type="text" class="form-control" id="searchInput" placeholder="Cari nama customer..." style="width:220px;" oninput="filterOrders()">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Customer</th>
+            <th>Produk</th>
+            <th>CS Handle</th>
+            <th>Waktu</th>
+            <th>Status</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="ordersTable">
+          <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray-400);">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay hidden" id="detailModal">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title">Detail Order</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Tutup</button>
+      <button class="btn btn-accent" id="btnWA" onclick="openWA()">💬 Buka WA CS</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  requireAuth();
+  renderNavbar('orders');
+
+  let allOrders = [];
+  let currentOrder = null;
+
+  async function loadOrders() {
+    const status = document.getElementById('filterStatus').value;
+    const q = status ? `?status=eq.${status}&order=created_at.desc&select=*,products(name),cs_team(name,wa_number)` : '?order=created_at.desc&select=*,products(name),cs_team(name,wa_number)&limit=200';
+    try {
+      allOrders = await sbGet('orders', q);
+      renderOrders(allOrders);
+    } catch(e) {
+      document.getElementById('ordersTable').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--red);">Gagal load: ${e.message}</td></tr>`;
+    }
+  }
+
+  function filterOrders() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    renderOrders(allOrders.filter(o =>
+      (o.customer_name||'').toLowerCase().includes(q) ||
+      (o.customer_wa||'').includes(q)
+    ));
+  }
+
+  function renderOrders(orders) {
+    const tbody = document.getElementById('ordersTable');
+    if (!orders.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">Tidak ada order</div></div></td></tr>`;
+      return;
+    }
+    const statusMap = {
+      pending: 'badge-orange',
+      closing: 'badge-green',
+      cancel:  'badge-red',
+    };
+    tbody.innerHTML = orders.map(o => `
+      <tr style="cursor:pointer;" onclick="openDetail('${o.id}')">
+        <td>
+          <div style="font-weight:600;">${o.customer_name || '-'}</div>
+          <div style="font-size:11px;color:var(--gray-400);">${o.customer_wa || ''}</div>
+        </td>
+        <td>${o.products?.name || '-'}</td>
+        <td>${o.cs_team?.name || '-'}</td>
+        <td style="font-size:12px;color:var(--gray-400);">${timeAgo(o.created_at)}</td>
+        <td>
+          <select class="form-control" style="width:110px;padding:4px 8px;font-size:12px;" onclick="event.stopPropagation()" onchange="updateStatus('${o.id}',this.value)">
+            <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
+            <option value="closing" ${o.status==='closing'?'selected':''}>Closing</option>
+            <option value="cancel"  ${o.status==='cancel'?'selected':''}>Cancel</option>
+          </select>
+        </td>
+        <td onclick="event.stopPropagation()">
+          <div class="flex gap-8">
+            <button class="btn btn-outline btn-sm" onclick="openWADirect('${o.customer_wa}','${(o.customer_name||'').replace(/'/g,"\\'")}')">💬 WA</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  async function updateStatus(id, status) {
+    try {
+      await sbPatch('orders', `?id=eq.${id}`, { status });
+      showToast('Status diperbarui', 'success');
+      const o = allOrders.find(o => o.id === id);
+      if (o) o.status = status;
+    } catch(e) {
+      showToast('Gagal update: ' + e.message, 'error');
+    }
+  }
+
+  function openDetail(id) {
+    currentOrder = allOrders.find(o => o.id === id);
+    if (!currentOrder) return;
+    const o = currentOrder;
+    document.getElementById('modalBody').innerHTML = `
+      <div style="display:grid;gap:12px;">
+        <div><div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;">Customer</div>
+          <div style="font-weight:700;font-size:16px;">${o.customer_name || '-'}</div></div>
+        <div class="flex gap-12">
+          <div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--gray-400);">No. WhatsApp</div><div>${o.customer_wa || '-'}</div></div>
+          <div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--gray-400);">Produk</div><div>${o.products?.name || '-'}</div></div>
+        </div>
+        <div><div style="font-size:11px;font-weight:600;color:var(--gray-400);">Alamat</div><div>${o.customer_address || '-'}</div></div>
+        <div class="flex gap-12">
+          <div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--gray-400);">Kota</div><div>${o.customer_city || '-'}</div></div>
+          <div style="flex:1;"><div style="font-size:11px;font-weight:600;color:var(--gray-400);">CS Handle</div><div>${o.cs_team?.name || '-'}</div></div>
+        </div>
+        ${o.customer_note ? `<div><div style="font-size:11px;font-weight:600;color:var(--gray-400);">Catatan</div><div>${o.customer_note}</div></div>` : ''}
+        <div><div style="font-size:11px;font-weight:600;color:var(--gray-400);">Waktu Order</div><div>${new Date(o.created_at).toLocaleString('id-ID')}</div></div>
+      </div>`;
+    document.getElementById('detailModal').classList.remove('hidden');
+  }
+
+  function closeModal() { document.getElementById('detailModal').classList.add('hidden'); }
+
+  function openWA() {
+    if (!currentOrder) return;
+    openWADirect(currentOrder.customer_wa, currentOrder.customer_name);
+  }
+
+  function openWADirect(wa, name) {
+    const n = normalizeWA(wa);
+    window.open(`https://wa.me/${n}`, '_blank');
+  }
+
+  loadOrders();
+</script>
+</body>
+</html>

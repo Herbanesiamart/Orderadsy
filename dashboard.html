@@ -96,11 +96,14 @@
   async function loadDashboard(from, to) {
     const csFilter = getCSId() ? `&cs_id=eq.${getCSId()}` : '';
     try {
-      const fromISO = from.toISOString();
-      const toISO   = to.toISOString();
-      const orders = await sbGet('orders',
-        `?created_at=gte.${fromISO}&created_at=lte.${toISO}${csFilter}&select=id,status,created_at`
-      );
+      const params = [];
+      if (from && to) {
+        params.push(`created_at=gte.${from.toISOString()}`);
+        params.push(`created_at=lte.${to.toISOString()}`);
+      }
+      if (getCSId()) params.push(`cs_id=eq.${getCSId()}`);
+      params.push('select=id,status,created_at');
+      const orders = await sbGet('orders', '?' + params.join('&'));
 
       const total   = orders.length;
       const closing = orders.filter(o => o.status === 'closing').length;
@@ -128,20 +131,37 @@
     const ordersData  = [];
     const closingData = [];
 
-    // Iterate day by day from from → to
-    const cur = new Date(from);
-    cur.setHours(0, 0, 0, 0);
-    const end = new Date(to);
-    end.setHours(0, 0, 0, 0);
+    if (from && to) {
+      // Iterate day by day
+      const cur = new Date(from);
+      cur.setHours(0, 0, 0, 0);
+      const end = new Date(to);
+      end.setHours(0, 0, 0, 0);
 
-    while (cur <= end) {
-      const label  = cur.toLocaleDateString('id-ID', { day:'numeric', month:'short' });
-      labels.push(label);
-      const dayStr = cur.toISOString().slice(0, 10);
-      const dayOrders = orders.filter(o => o.created_at.slice(0, 10) === dayStr);
-      ordersData.push(dayOrders.length);
-      closingData.push(dayOrders.filter(o => o.status === 'closing').length);
-      cur.setDate(cur.getDate() + 1);
+      while (cur <= end) {
+        const label  = cur.toLocaleDateString('id-ID', { day:'numeric', month:'short' });
+        labels.push(label);
+        const dayStr = cur.toISOString().slice(0, 10);
+        const dayOrders = orders.filter(o => o.created_at.slice(0, 10) === dayStr);
+        ordersData.push(dayOrders.length);
+        closingData.push(dayOrders.filter(o => o.status === 'closing').length);
+        cur.setDate(cur.getDate() + 1);
+      }
+    } else {
+      // "Semua" — group by month from earliest order
+      const monthMap = {};
+      orders.forEach(o => {
+        const key = o.created_at.slice(0, 7); // "YYYY-MM"
+        if (!monthMap[key]) monthMap[key] = { total: 0, closing: 0 };
+        monthMap[key].total++;
+        if (o.status === 'closing') monthMap[key].closing++;
+      });
+      Object.keys(monthMap).sort().forEach(key => {
+        const [y, m] = key.split('-');
+        labels.push(new Date(y, m - 1, 1).toLocaleDateString('id-ID', { month:'short', year:'2-digit' }));
+        ordersData.push(monthMap[key].total);
+        closingData.push(monthMap[key].closing);
+      });
     }
 
     if (chart) chart.destroy();

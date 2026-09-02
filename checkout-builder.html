@@ -104,7 +104,7 @@
         </div>
         <div class="form-group" style="margin-bottom:0;">
           <label class="form-label">Icon Tombol</label>
-          <div class="icon-options" id="iconOptions"></div>
+          <select class="form-control" id="iconSelect" onchange="setIcon(this.value)"></select>
         </div>
       </div>
 
@@ -202,7 +202,15 @@
       document.getElementById('backLink').href = 'products-detail.html?id=' + product.id;
       document.getElementById('viewBtn').href = 'checkout.html?slug=' + product.slug + '&page=' + pageId;
 
-      fields = checkoutPage.fields_config || getDefaultFields();
+      // Merge stored config dengan default — pastikan field baru (misal keluhan) selalu ada
+      const stored = checkoutPage.fields_config || [];
+      const defaults = getDefaultFields();
+      const storedMap = {};
+      stored.forEach(f => storedMap[f.key] = f);
+      fields = defaults.map(def => storedMap[def.key]
+        ? { ...def, enabled: storedMap[def.key].enabled, required: storedMap[def.key].required }
+        : def
+      );
       btnColor = checkoutPage.button_color || '#F59E0B';
       document.getElementById('btnText').value = checkoutPage.button_text || 'Beli Sekarang';
       document.getElementById('pixelEvent').value = checkoutPage.pixel_event || 'Lead';
@@ -223,17 +231,12 @@
   }
 
   function renderIconOptions() {
-    document.getElementById('iconOptions').innerHTML = ICONS.map(ic => `
-      <div class="icon-opt ${btnIcon === ic.key ? 'selected' : ''}" onclick="setIcon('${ic.key}',this)">
-        ${ic.key !== 'none' ? `<span style="display:inline-flex;align-items:center;">${ic.html}</span>` : ''}
-        <span style="color:inherit;">${ic.label}</span>
-      </div>`).join('');
+    const sel = document.getElementById('iconSelect');
+    sel.innerHTML = ICONS.map(ic => `<option value="${ic.key}" ${ic.key === btnIcon ? 'selected' : ''}>${ic.label}</option>`).join('');
   }
 
-  function setIcon(key, el) {
+  function setIcon(key) {
     btnIcon = key;
-    document.querySelectorAll('.icon-opt').forEach(o => o.classList.remove('selected'));
-    el.classList.add('selected');
     updatePreview();
   }
 
@@ -256,22 +259,33 @@
 
   function renderFields() {
     const el = document.getElementById('fieldsList');
-    el.innerHTML = fields.map((f, i) => `
+    el.innerHTML = fields.map((f, i) => {
+      const locked = LOCKED_FIELDS.includes(f.key);
+      return `
       <div class="field-row ${f.enabled?'':'disabled'}" id="field-${i}">
         <span class="field-drag">⠿</span>
-        <div class="toggle ${f.enabled?'on':''}" onclick="toggleField(${i})"></div>
+        <div class="toggle ${f.enabled?'on':''}"
+             onclick="toggleField(${i})"
+             style="${locked ? 'cursor:not-allowed;opacity:0.6;' : 'cursor:pointer;'}"></div>
         <div class="field-label">
           ${f.label}
           ${f.required ? '<span class="req-badge">WAJIB</span>' : ''}
         </div>
-        ${!f.required ? `<button onclick="toggleRequired(${i})" style="font-size:11px;color:var(--gray-400);background:none;border:none;cursor:pointer;">${f.required?'Wajib':'Opsional'}</button>` : ''}
-      </div>`).join('');
+        ${f.enabled && !locked ? `<button onclick="toggleRequired(${i})" style="font-size:11px;color:var(--gray-400);background:none;border:none;cursor:pointer;">${f.required?'Wajib':'Opsional'}</button>` : ''}
+        ${!f.enabled && !locked ? `<span style="font-size:11px;color:var(--gray-300);">Opsional</span>` : ''}
+      </div>`;
+    }).join('');
     updatePreview();
   }
 
+  // Field yang benar-benar locked (tidak bisa di-off): hanya nama & wa
+  const LOCKED_FIELDS = ['nama', 'wa'];
+
   function toggleField(i) {
-    if (fields[i].required) return; // required fields can't be disabled
+    if (LOCKED_FIELDS.includes(fields[i].key)) return;
     fields[i].enabled = !fields[i].enabled;
+    // Kalau di-disable, reset required juga
+    if (!fields[i].enabled) fields[i].required = false;
     renderFields();
   }
 

@@ -350,7 +350,7 @@
     const cs = assignedCS.length > 0 ? assignedCS[rotatorIndex % assignedCS.length] : null;
 
     try {
-      // 1. Save order to Supabase
+      // 1. Save order — satu-satunya yang di-await
       const orderRes = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
         method: 'POST',
         headers: { ...sbH, 'Prefer': 'return=representation' },
@@ -371,18 +371,19 @@
       const orderData = await orderRes.json();
       const orderId = orderData[0]?.id;
 
-      // 2. Update CS rotator
+      // 2-5. Semua background tasks — fire and forget, tidak perlu ditunggu
+      const capiEvent = checkoutPage.pixel_event || 'Lead';
+
+      // Update rotator
       if (assignedCS.length > 1) {
-        const newIndex = (rotatorIndex + 1) % assignedCS.length;
-        await fetch(`${SUPABASE_URL}/rest/v1/cs_rotator?product_id=eq.${product.id}`, {
+        fetch(`${SUPABASE_URL}/rest/v1/cs_rotator?product_id=eq.${product.id}`, {
           method: 'PATCH',
           headers: { ...sbH, 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ last_cs_index: newIndex }),
-        });
+          body: JSON.stringify({ last_cs_index: (rotatorIndex + 1) % assignedCS.length }),
+        }).catch(() => {});
       }
 
-      // 3. Send CAPI event via Edge Function (event sesuai setting checkout page)
-      const capiEvent = checkoutPage.pixel_event || 'Lead';
+      // CAPI
       if (product.pixel_id && product.access_token) {
         fetch(`${API_URL}/send-capi`, {
           method: 'POST',
@@ -394,48 +395,38 @@
             event_id:      eventId,
             event_time:    Math.floor(Date.now() / 1000),
             user_data: {
-              ph:    normalizeWA(customerWA),
-              em:    customerEmail || null,
-              fn:    customerName?.split(' ')[0]?.toLowerCase() || null,
-              ln:    customerName?.split(' ').slice(1).join(' ')?.toLowerCase() || null,
-              ct:    customerCity?.toLowerCase().replace(/\s/g, '') || null,
+              ph: normalizeWA(customerWA), em: customerEmail || null,
+              fn: customerName?.split(' ')[0]?.toLowerCase() || null,
+              ln: customerName?.split(' ').slice(1).join(' ')?.toLowerCase() || null,
+              ct: customerCity?.toLowerCase().replace(/\s/g, '') || null,
               country: 'id',
             },
-            custom_data: {
-              product_name: product.name,
-              order_id:     orderId,
-              value:        product.price,
-              currency:     'IDR',
-            },
+            custom_data: { product_name: product.name, order_id: orderId, value: product.price, currency: 'IDR' },
             event_source_url: window.location.href,
           }),
-        }).catch(e => console.warn('CAPI error:', e));
+        }).catch(() => {});
       }
 
-      // 4. Fire browser pixel event (for dedup)
+      // Browser pixel
       if (window.fbq && product.pixel_id) {
         fbq('track', capiEvent, { value: product.price, currency: 'IDR' }, { eventID: eventId });
       }
 
-      // 5. Send email notif to CS (via Edge Function)
+      // Email notif
       if (cs?.email) {
         fetch(`${API_URL}/send-order-email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            to:             cs.email,
-            cs_name:        cs.name,
-            customer_name:  customerName,
-            customer_wa:    normalizeWA(customerWA),
-            customer_address: customerAddress,
-            customer_city:  customerCity,
-            product_name:   product.name,
-            order_id:       orderId,
+            to: cs.email, cs_name: cs.name,
+            customer_name: customerName, customer_wa: normalizeWA(customerWA),
+            customer_address: customerAddress, customer_city: customerCity,
+            product_name: product.name, order_id: orderId,
           }),
-        }).catch(e => console.warn('Email error:', e));
+        }).catch(() => {});
       }
 
-      // 6. Redirect ke WA CS
+      // 6. Redirect langsung ke WA CS tanpa delay
       if (cs) {
         const redirectTemplate = product.followup_redirect || 'Halo, saya {{name}} ingin order {{product}}\n\nNama     : {{name}}\nNo. WA   : {{phone}}\nAlamat   : {{address}}';
         const msg = redirectTemplate
@@ -445,19 +436,15 @@
           .replace(/\{\{product\}\}/gi, product.name);
 
         const waUrl = `https://wa.me/${normalizeWA(cs.wa_number)}?text=${encodeURIComponent(msg)}`;
-        setTimeout(() => {
-          // Kalau dalam iframe, redirect ke parent window agar wa.me bisa terbuka
-          try {
-            if (window.top !== window.self) {
-              window.top.location.href = waUrl;
-            } else {
-              window.location.href = waUrl;
-            }
-          } catch(e) {
-            // Kalau cross-origin iframe, buka di tab baru
-            window.open(waUrl, '_blank');
+        try {
+          if (window.top !== window.self) {
+            window.top.location.href = waUrl;
+          } else {
+            window.location.href = waUrl;
           }
-        }, 500);
+        } catch(e) {
+          window.open(waUrl, '_blank');
+        }
       }
 
     } catch(e) {

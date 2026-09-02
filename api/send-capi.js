@@ -46,8 +46,8 @@ module.exports = async function handler(req, res) {
     ...(user_data.country ? { country: sha256(user_data.country) } : {}),
     client_ip_address: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || undefined,
     client_user_agent: req.headers['user-agent'] || undefined,
-    fbc:  req.headers['x-fbc']  || undefined,
-    fbp:  req.headers['x-fbp']  || undefined,
+    fbc: user_data.fbc || undefined,
+    fbp: user_data.fbp || undefined,
   };
 
   const payload = {

@@ -13,16 +13,20 @@ class DateFilter {
     this.rangeEnd   = null;
     this.hoverDate  = null;
 
-    // Which two months the calendars show
-    this._today = new Date();
-    this._today.setHours(0, 0, 0, 0);
+    // WIB = UTC+7
+    this.WIB = 7 * 60 * 60 * 1000;
 
-    const now = new Date();
-    this.leftYear  = now.getFullYear();
-    this.leftMonth = now.getMonth() - 1;
+    // Which two months the calendars show — use WIB "today"
+    const wibNow = new Date(Date.now() + this.WIB);
+    const wy = wibNow.getUTCFullYear(), wm = wibNow.getUTCMonth(), wd = wibNow.getUTCDate();
+    // _today = WIB midnight expressed as UTC ms
+    this._today = new Date(Date.UTC(wy, wm, wd) - this.WIB);
+
+    this.leftYear  = wy;
+    this.leftMonth = wm - 1;
     if (this.leftMonth < 0) { this.leftMonth = 11; this.leftYear--; }
-    this.rightYear  = now.getFullYear();
-    this.rightMonth = now.getMonth();
+    this.rightYear  = wy;
+    this.rightMonth = wm;
 
     this.MONTHS = ['Januari','Februari','Maret','April','Mei','Juni',
                    'Juli','Agustus','September','Oktober','November','Desember'];
@@ -53,20 +57,31 @@ class DateFilter {
   }
 
   _applyDefault() {
-    const from = this.rangeStart ? new Date(this.rangeStart) : null;
-    const to   = this.rangeEnd   ? new Date(this.rangeEnd)   : null;
-    if (from) from.setHours(0, 0, 0, 0);
-    if (to)   to.setHours(23, 59, 59, 999);
+    // from = WIB start of day, to = WIB end of day
+    const from = this.rangeStart ? this._wibSod(this.rangeStart) : null;
+    const to   = this.rangeEnd   ? this._wibEod(this.rangeEnd)   : null;
     const labelEl = this.trigger.querySelector('.df-label');
     if (labelEl) labelEl.textContent = this.activePreset;
     if (this.callback) this.callback({ from, to, label: this.activePreset });
   }
 
+  /* ── WIB helpers ────────────────────────────────────────────── */
+  // WIB start of day (00:00 WIB) as UTC Date
+  _wibSod(date) {
+    const d = new Date(date.getTime() + this.WIB);
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - this.WIB);
+  }
+
+  // WIB end of day (23:59:59.999 WIB) as UTC Date
+  _wibEod(date) {
+    const d = new Date(date.getTime() + this.WIB);
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999) - this.WIB);
+  }
+
   /* ── Preset helpers ─────────────────────────────────────────── */
+  // Offset in days from WIB today (this._today is already WIB midnight as UTC)
   _dateOffset(offset) {
-    const d = new Date(this._today);
-    d.setDate(d.getDate() + offset);
-    return d;
+    return new Date(this._today.getTime() + offset * 86400000);
   }
 
   _presetAll() {
@@ -84,19 +99,20 @@ class DateFilter {
   }
 
   _presetMonthThis() {
-    const d = new Date(this._today);
-    this.rangeStart = new Date(d.getFullYear(), d.getMonth(), 1);
-    this.rangeEnd   = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+    // Use WIB year/month
+    const wib = new Date(this._today.getTime() + this.WIB);
+    const y = wib.getUTCFullYear(), m = wib.getUTCMonth();
+    this.rangeStart = new Date(Date.UTC(y, m, 1)     - this.WIB); // 1st day WIB midnight
+    this.rangeEnd   = new Date(Date.UTC(y, m + 1, 0) - this.WIB); // last day WIB midnight
     this.selecting  = false;
     this.hoverDate  = null;
   }
 
   _presetMonthLast() {
-    const d = new Date(this._today);
-    const first = new Date(d.getFullYear(), d.getMonth() - 1, 1);
-    const last  = new Date(d.getFullYear(), d.getMonth(), 0);
-    this.rangeStart = first;
-    this.rangeEnd   = last;
+    const wib = new Date(this._today.getTime() + this.WIB);
+    const y = wib.getUTCFullYear(), m = wib.getUTCMonth();
+    this.rangeStart = new Date(Date.UTC(y, m - 1, 1) - this.WIB); // 1st of last month WIB
+    this.rangeEnd   = new Date(Date.UTC(y, m, 0)     - this.WIB); // last of last month WIB
     this.selecting  = false;
     this.hoverDate  = null;
   }
@@ -180,12 +196,11 @@ class DateFilter {
       `<div class="df-day-name ${this.WEEKENDS.includes(i) ? 'weekend' : ''}">${d}</div>`
     ).join('');
 
-    // First day of month — JS getDay() is 0=Sun, we want 0=Mon
-    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun..6=Sat
-    // Convert to Mon-based: Sun→6, Mon→0, Tue→1...
-    const startOffset = (firstDay + 6) % 7;
+    // First day of month in WIB calendar (year/month are WIB integers)
+    const firstDayUTC = new Date(Date.UTC(year, month, 1)).getUTCDay(); // 0=Sun..6=Sat
+    const startOffset = (firstDayUTC + 6) % 7; // Mon-based: Sun→6, Mon→0
 
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
     let cells = '';
 
     for (let i = 0; i < startOffset; i++) {
@@ -193,10 +208,10 @@ class DateFilter {
     }
 
     for (let d = 1; d <= daysInMonth; d++) {
-      const date   = new Date(year, month, d);
-      date.setHours(0, 0, 0, 0);
-      const ts     = date.getTime();
-      const dow    = (date.getDay() + 6) % 7; // Mon=0..Sun=6
+      // Use WIB midnight as UTC ms (consistent with _today and rangeStart/rangeEnd)
+      const ts     = Date.UTC(year, month, d) - this.WIB;
+      const wibDay = new Date(ts + this.WIB);        // UTC date = WIB date
+      const dow    = (wibDay.getUTCDay() + 6) % 7;  // Mon=0..Sun=6
       const isWknd = this.WEEKENDS.includes(dow);
       const isToday = ts === this._today.getTime();
 
@@ -346,10 +361,9 @@ class DateFilter {
       }
     }
 
-    const from = new Date(this.rangeStart);
-    from.setHours(0, 0, 0, 0);
-    const to = new Date(this.rangeEnd);
-    to.setHours(23, 59, 59, 999);
+    // Convert to WIB start/end of day
+    const from = this._wibSod(this.rangeStart);
+    const to   = this._wibEod(this.rangeEnd);
 
     const label = this.activePreset || this._formatRange(from, to);
     const labelEl = this.trigger.querySelector('.df-label');

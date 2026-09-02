@@ -61,11 +61,11 @@
 
   async function loadProducts() {
     try {
-      const products = await sbGet('products', '?order=created_at.desc&select=*');
-      allProducts = products;
+      const [products, orderStats] = await Promise.all([
+        sbGet('products', '?order=created_at.desc&select=*'),
+        sbGet('orders', '?select=product_id,status&limit=5000').catch(() => [])
+      ]);
 
-      // Load order stats per product
-      const orderStats = await sbGet('orders', '?select=product_id,status').catch(() => []);
       const statsMap = {};
       orderStats.forEach(o => {
         if (!statsMap[o.product_id]) statsMap[o.product_id] = { total: 0, closing: 0 };

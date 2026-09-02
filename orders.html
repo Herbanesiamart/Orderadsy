@@ -15,7 +15,7 @@
   <div class="page-header">
     <div class="page-title">Orders</div>
     <div class="flex gap-8 flex-wrap">
-      <select class="form-control" id="filterStatus" style="width:150px;" onchange="loadOrders()">
+      <select class="form-control" id="filterStatus" style="width:150px;" onchange="loadOrders(1)">
         <option value="">Semua Status</option>
         <option value="pending">Pending</option>
         <option value="closing">Closing</option>
@@ -43,6 +43,7 @@
         </tbody>
       </table>
     </div>
+    <div id="pagination" style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-top:1px solid var(--gray-200);"></div>
   </div>
 </div>
 
@@ -68,26 +69,56 @@
   renderNavbar('orders');
 
   const API_URL = 'https://orderadsy.vercel.app/api';
+  const PAGE_SIZE = 25;
   let allOrders = [];
   let currentOrder = null;
+  let currentPage = 1;
+  let totalCount = 0;
 
-  async function loadOrders() {
+  async function loadOrders(page = 1) {
+    currentPage = page;
     const status = document.getElementById('filterStatus').value;
-    const q = status ? `?status=eq.${status}&order=created_at.desc&select=*,products(name),cs_team(name,wa_number)` : '?order=created_at.desc&select=*,products(name),cs_team(name,wa_number)&limit=200';
+    const search = document.getElementById('searchInput').value.trim();
+    const offset = (page - 1) * PAGE_SIZE;
+
+    let filter = status ? `status=eq.${status}&` : '';
+    if (search) filter += `customer_name=ilike.*${encodeURIComponent(search)}*&`;
+
+    const countQ = `?${filter}select=id`;
+    const dataQ  = `?${filter}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,products(name),cs_team(name,wa_number)`;
+
     try {
-      allOrders = await sbGet('orders', q);
-      renderOrders(allOrders);
+      document.getElementById('ordersTable').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--gray-400);">Loading...</td></tr>`;
+      const [orders, countRes] = await Promise.all([
+        sbGet('orders', dataQ),
+        sbGet('orders', countQ)
+      ]);
+      allOrders = orders;
+      totalCount = countRes.length;
+      renderOrders(orders);
+      renderPagination();
     } catch(e) {
       document.getElementById('ordersTable').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--red);">Gagal load: ${e.message}</td></tr>`;
     }
   }
 
   function filterOrders() {
-    const q = document.getElementById('searchInput').value.toLowerCase();
-    renderOrders(allOrders.filter(o =>
-      (o.customer_name||'').toLowerCase().includes(q) ||
-      (o.customer_wa||'').includes(q)
-    ));
+    loadOrders(1);
+  }
+
+  function renderPagination() {
+    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+    const start = (currentPage - 1) * PAGE_SIZE + 1;
+    const end   = Math.min(currentPage * PAGE_SIZE, totalCount);
+    document.getElementById('pagination').innerHTML = `
+      <div style="font-size:13px;color:var(--gray-400);">
+        ${totalCount > 0 ? `${start}–${end} dari ${totalCount} order` : 'Tidak ada order'}
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="loadOrders(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>← Prev</button>
+        <span style="padding:4px 12px;font-size:13px;font-weight:600;">Hal. ${currentPage} / ${totalPages}</span>
+        <button class="btn btn-outline btn-sm" onclick="loadOrders(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>Next →</button>
+      </div>`;
   }
 
   function renderOrders(orders) {
@@ -200,7 +231,7 @@
     window.open(`https://wa.me/${n}`, '_blank');
   }
 
-  loadOrders();
+  loadOrders(1);
 </script>
 </body>
 </html>

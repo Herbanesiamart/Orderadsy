@@ -206,6 +206,21 @@
     return Date.now().toString(36) + Math.random().toString(36).slice(2);
   }
 
+  // ── Ambil fbc (klik iklan) & fbp (browser ID) untuk atribusi ──
+  function getFbc() {
+    // Coba dari URL fbclid dulu (fresh click dari iklan)
+    const fbclid = new URLSearchParams(location.search).get('fbclid');
+    if (fbclid) return `fb.1.${Date.now()}.${fbclid}`;
+    // Fallback dari cookie _fbc
+    const m = document.cookie.match(/_fbc=([^;]+)/);
+    return m ? m[1] : null;
+  }
+
+  function getFbp() {
+    const m = document.cookie.match(/_fbp=([^;]+)/);
+    return m ? m[1] : null;
+  }
+
   // ── Page state ──────────────────────────────────────────
   const params      = new URLSearchParams(location.search);
   const slug        = params.get('slug');
@@ -393,6 +408,8 @@
               ln: customerName?.split(' ').slice(1).join(' ')?.toLowerCase() || null,
               ct: customerCity?.toLowerCase().replace(/\s/g, '') || null,
               country: 'id',
+              fbc: getFbc(),
+              fbp: getFbp(),
             },
             custom_data: { product_name: product.name, order_id: orderId, value: product.price, currency: 'IDR' },
             event_source_url: window.location.href,

@@ -10,7 +10,6 @@
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     background: #fff;
-    min-height: 100vh;
     color: #1F2937;
   }
 
@@ -31,15 +30,6 @@
   .trust-item {
     display: flex; align-items: center; gap: 6px;
     font-size: 12px; color: #6B7280;
-  }
-
-  /* Product name */
-  .product-name-co {
-    padding: 14px 20px;
-    font-size: 16px;
-    font-weight: 700;
-    color: #111827;
-    border-bottom: 1px solid #E5E7EB;
   }
 
   /* Form section */
@@ -144,9 +134,6 @@
     <div class="trust-item">🔒 Transaksi Aman</div>
     <div class="trust-item">👍 Jaminan Kepuasan</div>
   </div>
-
-  <!-- Product name -->
-  <div class="product-name-co" id="productName"></div>
 
   <!-- Form -->
   <div class="form-section">
@@ -280,9 +267,6 @@
 
   function renderPage() {
     document.getElementById('loadingOverlay').style.display = 'none';
-
-    // Product name
-    document.getElementById('productName').textContent = product.name;
 
     // Fields
     fields = checkoutPage.fields_config || [];

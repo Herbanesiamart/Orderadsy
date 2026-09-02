@@ -60,12 +60,12 @@
           </div>
         </div>
       </div>
-      <canvas id="txChart" height="200"></canvas>
+      <canvas id="txChart" style="max-height:220px;"></canvas>
     </div>
 
-    <div class="card card-body">
+    <div class="card card-body" style="display:flex;flex-direction:column;">
       <div class="section-title mb-16">Order Terbaru</div>
-      <div id="recentOrders">
+      <div id="recentOrders" style="overflow-y:auto;max-height:220px;flex:1;">
         <div class="empty-state">
           <div class="empty-state-icon">📭</div>
           <div class="empty-state-text">Belum ada order</div>

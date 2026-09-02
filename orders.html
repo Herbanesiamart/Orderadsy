@@ -67,6 +67,7 @@
   requireAuth();
   renderNavbar('orders');
 
+  const API_URL = 'https://orderadsy.vercel.app/api';
   let allOrders = [];
   let currentOrder = null;
 
@@ -130,6 +131,35 @@
       showToast('Status diperbarui', 'success');
       const o = allOrders.find(o => o.id === id);
       if (o) o.status = status;
+
+      // Kirim Purchase event ke Meta CAPI saat status → closing
+      if (status === 'closing' && o && o.product_id) {
+        try {
+          const products = await sbGet('products', `?id=eq.${o.product_id}&select=pixel_id,access_token`);
+          const product = products[0];
+          if (product && product.pixel_id && product.access_token) {
+            await fetch(`${API_URL}/send-capi`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                pixel_id: product.pixel_id,
+                access_token: product.access_token,
+                event_name: 'Purchase',
+                event_id: 'closing_' + id,
+                user_data: {
+                  ph: o.customer_wa || '',
+                  fn: (o.customer_name || '').split(' ')[0].toLowerCase(),
+                  ln: (o.customer_name || '').split(' ').slice(1).join(' ').toLowerCase(),
+                  ct: (o.customer_city || '').toLowerCase(),
+                  country: 'id'
+                }
+              })
+            });
+          }
+        } catch(capiErr) {
+          console.warn('CAPI Purchase gagal:', capiErr.message);
+        }
+      }
     } catch(e) {
       showToast('Gagal update: ' + e.message, 'error');
     }

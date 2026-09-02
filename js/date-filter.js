@@ -130,6 +130,9 @@ class DateFilter {
     this._renderSidebar();
     this._renderCalendars();
 
+    // Prevent clicks inside dropdown from bubbling to document (would close it)
+    el.addEventListener('click', (e) => e.stopPropagation());
+
     document.getElementById('__df_cancel').addEventListener('click', () => this.close());
     document.getElementById('__df_apply').addEventListener('click', () => this._apply());
   }

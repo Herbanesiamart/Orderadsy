@@ -17,6 +17,9 @@
   <div class="page-header">
     <div class="page-title">Orders</div>
     <div class="flex gap-8 flex-wrap orders-filter-row">
+      <select class="form-control" id="filterProduct" style="width:170px;" onchange="loadOrders(1)">
+        <option value="">Semua Produk</option>
+      </select>
       <select class="form-control" id="filterStatus" style="width:160px;" onchange="loadOrders(1)">
         <option value="">Semua Status</option>
         <option value="pending">Lead Baru</option>
@@ -124,12 +127,30 @@
   }
   initRealtime();
 
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', async () => {
     dateFilter = new DateFilter(
       document.getElementById('dateFilterBtn'),
       ({ from, to }) => { _dateFrom = from; _dateTo = to; loadOrders(1); },
       'Semua'
     );
+
+    // Load products untuk filter
+    try {
+      let q = '?select=id,name&order=name.asc';
+      if (getCSId()) {
+        const assigned = await sbGet('product_cs', `?cs_id=eq.${getCSId()}&select=product_id`);
+        const ids = assigned.map(a => a.product_id).join(',');
+        if (ids) q = `?id=in.(${ids})&select=id,name&order=name.asc`;
+      }
+      const products = await sbGet('products', q);
+      const sel = document.getElementById('filterProduct');
+      products.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+      });
+    } catch(e) {}
 
     // Auto-open order detail if navigated from notification
     const openId = new URLSearchParams(window.location.search).get('open');
@@ -147,8 +168,10 @@
     const search = document.getElementById('searchInput').value.trim();
     const offset = (page - 1) * PAGE_SIZE;
 
-    let filter = status ? `status=eq.${status}&` : '';
-    if (search) filter += `customer_name=ilike.*${encodeURIComponent(search)}*&`;
+    const productId = document.getElementById('filterProduct').value;
+    let filter = status    ? `status=eq.${status}&` : '';
+    if (productId) filter += `product_id=eq.${productId}&`;
+    if (search)    filter += `customer_name=ilike.*${encodeURIComponent(search)}*&`;
     if (getCSId()) filter += `cs_id=eq.${getCSId()}&`;
     if (_dateFrom) filter += `created_at=gte.${_dateFrom.toISOString()}&`;
     if (_dateTo)   filter += `created_at=lte.${_dateTo.toISOString()}&`;

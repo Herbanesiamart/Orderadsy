@@ -217,7 +217,7 @@
 
       const [orders, recent] = await Promise.all([
         sbGet('orders', '?' + params.join('&')),
-        sbGet('orders', `?select=id,customer_name,status,created_at,product_id,products(name)&order=created_at.desc&limit=8${csFilter}${productFilter}`),
+        sbGet('orders', `?select=id,customer_name,status,created_at,product_id,products(name)&order=created_at.desc&limit=8${csFilter}${productFilter}${from && to ? `&created_at=gte.${from.toISOString()}&created_at=lte.${to.toISOString()}` : ''}`),
       ]);
 
       // Hitung semua KPI client-side dari 1 dataset

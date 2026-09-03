@@ -155,15 +155,16 @@
         <div style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">
           Template follow up untuk CS ketika melakukan follow up ke customer yang belum closing.
         </div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
           <label style="font-size:13px;font-weight:500;white-space:nowrap;">Pilih Status:</label>
-          <select class="form-control" id="fuSubSelect" style="width:160px;" onchange="switchFuSub(this.value)">
+          <select class="form-control" id="fuSubSelect" style="width:180px;" onchange="switchFuSub(this.value)">
             <option value="pasif">😴 Pasif</option>
             <option value="ongkir">🚚 Ongkir</option>
             <option value="harga">💰 Harga</option>
             <option value="ooc">📦 OOC</option>
             <option value="konsul">💬 Konsul</option>
           </select>
+          <span id="fuSubStatus"></span>
         </div>
         <div class="followup-meta-select">
           <span style="font-size:12px;color:var(--gray-500);align-self:center;">Insert variabel:</span>
@@ -176,6 +177,7 @@
         <textarea class="form-control" id="fu-followup-text" style="min-height:180px;font-family:monospace;" placeholder="Tulis template follow up untuk status ini..."></textarea>
         <div class="flex gap-8 mt-8 items-center">
           <button class="btn btn-primary" onclick="saveFollowupSub()">Simpan</button>
+          <button class="btn btn-outline" id="btnHapusFu" onclick="hapusFollowupSub()" style="display:none;color:var(--red);border-color:var(--red);">Hapus Template</button>
         </div>
       </div>
 
@@ -466,20 +468,53 @@
     el.classList.add('active');
   }
 
+  function _renderFuSubStatus(status) {
+    const tmpl = (window._fuTemplates || {})[status];
+    const statusEl = document.getElementById('fuSubStatus');
+    const hapusBtn = document.getElementById('btnHapusFu');
+    if (tmpl) {
+      statusEl.innerHTML = `<span style="font-size:12px;color:var(--green);font-weight:500;">✅ Template tersimpan</span>`;
+      hapusBtn.style.display = '';
+    } else {
+      statusEl.innerHTML = `<span style="font-size:12px;color:var(--gray-400);">⚠️ Belum ada template</span>`;
+      hapusBtn.style.display = 'none';
+    }
+    // Update dropdown options — tandai yang sudah ada template
+    document.querySelectorAll('#fuSubSelect option').forEach(opt => {
+      const hasTemplate = !!(window._fuTemplates || {})[opt.value];
+      opt.textContent = opt.textContent.replace(' ✓', '') + (hasTemplate ? ' ✓' : '');
+    });
+  }
+
   function switchFuSub(status) {
     document.getElementById('fuSubSelect').value = status;
     document.getElementById('fu-followup-text').value = (window._fuTemplates || {})[status] || '';
+    _renderFuSubStatus(status);
   }
 
   async function saveFollowupSub() {
     const status = document.getElementById('fuSubSelect').value;
-    const val    = document.getElementById('fu-followup-text').value;
+    const val    = document.getElementById('fu-followup-text').value.trim();
+    if (!val) { showToast('Template tidak boleh kosong', 'error'); return; }
     window._fuTemplates = window._fuTemplates || {};
     window._fuTemplates[status] = val;
     try {
       await sbPatch('products', `?id=eq.${productId}`, { followup_templates: window._fuTemplates });
       showToast('Template disimpan', 'success');
+      _renderFuSubStatus(status);
     } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
+  }
+
+  async function hapusFollowupSub() {
+    const status = document.getElementById('fuSubSelect').value;
+    window._fuTemplates = window._fuTemplates || {};
+    delete window._fuTemplates[status];
+    try {
+      await sbPatch('products', `?id=eq.${productId}`, { followup_templates: window._fuTemplates });
+      document.getElementById('fu-followup-text').value = '';
+      showToast('Template dihapus', 'success');
+      _renderFuSubStatus(status);
+    } catch(e) { showToast('Gagal hapus: ' + e.message, 'error'); }
   }
 
   function insertVar(textareaId, variable) {

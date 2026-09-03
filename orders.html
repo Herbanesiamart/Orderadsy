@@ -22,6 +22,11 @@
         <option value="pending">Pending</option>
         <option value="closing">Closing</option>
         <option value="cancel">Cancel</option>
+        <option value="pasif">Pasif</option>
+        <option value="ongkir">Ongkir</option>
+        <option value="harga">Harga</option>
+        <option value="ooc">OOC</option>
+        <option value="konsul">Konsul</option>
       </select>
       <input type="text" class="form-control" id="searchInput" placeholder="Cari nama customer..." style="width:220px;" oninput="filterOrders()">
       <button class="date-filter-btn" id="dateFilterBtn">📅 <span class="df-label">Last 30 Days</span> ▾</button>
@@ -202,9 +207,14 @@
       return;
     }
     const statusMap = {
-      pending: 'badge-orange',
-      closing: 'badge-green',
-      cancel:  'badge-red',
+      pending: ['badge-orange',  'Pending'],
+      closing: ['badge-green',   'Closing'],
+      cancel:  ['badge-red',     'Cancel'],
+      pasif:   ['badge-gray',    'Pasif'],
+      ongkir:  ['badge-purple',  'Ongkir'],
+      harga:   ['badge-purple',  'Harga'],
+      ooc:     ['badge-gray',    'OOC'],
+      konsul:  ['badge-blue',    'Konsul'],
     };
     tbody.innerHTML = orders.map(o => `
       <tr style="cursor:pointer;" onclick="openDetail('${o.id}')">
@@ -221,6 +231,13 @@
             <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
             <option value="closing" ${o.status==='closing'?'selected':''}>Closing</option>
             <option value="cancel"  ${o.status==='cancel'?'selected':''}>Cancel</option>
+            <optgroup label="── Alasan ──">
+            <option value="pasif"   ${o.status==='pasif'?'selected':''}>Pasif</option>
+            <option value="ongkir"  ${o.status==='ongkir'?'selected':''}>Ongkir</option>
+            <option value="harga"   ${o.status==='harga'?'selected':''}>Harga</option>
+            <option value="ooc"     ${o.status==='ooc'?'selected':''}>OOC</option>
+            <option value="konsul"  ${o.status==='konsul'?'selected':''}>Konsul</option>
+            </optgroup>
           </select>
         </td>
         <td data-label="" onclick="event.stopPropagation()">

@@ -259,7 +259,16 @@
       el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">Belum ada order</div></div>`;
       return;
     }
-    const statusMap = { pending: ['badge-orange','Pending'], closing: ['badge-green','Closing'], cancel: ['badge-red','Cancel'] };
+    const statusMap = {
+      pending: ['badge-orange', 'Pending'],
+      closing: ['badge-green',  'Closing'],
+      cancel:  ['badge-red',    'Cancel'],
+      pasif:   ['badge-gray',   'Pasif'],
+      ongkir:  ['badge-purple', 'Ongkir'],
+      harga:   ['badge-purple', 'Harga'],
+      ooc:     ['badge-gray',   'OOC'],
+      konsul:  ['badge-blue',   'Konsul'],
+    };
     el.innerHTML = orders.map(o => {
       const [cls, lbl] = statusMap[o.status] || ['badge-gray', o.status];
       return `

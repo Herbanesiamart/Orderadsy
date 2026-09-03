@@ -60,7 +60,7 @@
     btn.textContent = 'Memproses...';
 
     // Coba login admin dulu
-    if (u === ADMIN_USER && p === ADMIN_PASS) {
+    if (u.toLowerCase() === ADMIN_USER.toLowerCase() && p === ADMIN_PASS) {
       sessionStorage.setItem('oa_auth', JSON.stringify({ role: 'admin' }));
       window.location.href = 'dashboard.html';
       return;

@@ -480,6 +480,7 @@ select.form-control { cursor: pointer; }
 .badge-red    { background: var(--red-light);    color: var(--red); }
 .badge-gray   { background: var(--gray-100);     color: var(--gray-500); }
 .badge-blue   { background: var(--primary-light); color: var(--primary); }
+.badge-purple { background: var(--purple-light);  color: var(--purple); }
 
 /* ── Stepper ── */
 .stepper {

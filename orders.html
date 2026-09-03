@@ -270,29 +270,14 @@
 
   function renderFUBadge(o) {
     if (!o.fu_count) {
-      return `<span id="fu-badge-${o.id}" class="badge badge-gray" style="cursor:pointer;font-size:11px;" onclick="recordFU('${o.id}')">Belum FU</span>`;
+      return `<span class="badge badge-gray" style="font-size:11px;">Belum FU</span>`;
     }
-    return `<div id="fu-badge-${o.id}" style="cursor:pointer;" onclick="recordFU('${o.id}')">
+    return `<div>
       <span class="badge badge-blue" style="font-size:11px;">FU ${o.fu_count}x</span>
       <div style="font-size:10px;color:var(--gray-400);margin-top:2px;">${timeAgo(o.last_fu_at)}</div>
     </div>`;
   }
 
-  async function recordFU(id) {
-    const o = allOrders.find(o => o.id === id);
-    if (!o) return;
-    const newCount = (o.fu_count || 0) + 1;
-    const now = new Date().toISOString();
-    try {
-      await sbPatch('orders', `?id=eq.${id}`, { fu_count: newCount, last_fu_at: now });
-      o.fu_count = newCount;
-      o.last_fu_at = now;
-      const el = document.getElementById('fu-badge-' + id);
-      if (el) el.outerHTML = renderFUBadge(o);
-    } catch(e) {
-      showToast('Gagal catat FU: ' + e.message, 'error');
-    }
-  }
 
   function renderStatusCell(id, status) {
     const isBelum = BELUM_CLOSING.has(status);

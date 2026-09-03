@@ -82,7 +82,7 @@
       if (from && to) { rpcBody.from_date = from.toISOString(); rpcBody.to_date = to.toISOString(); }
 
       const [products, orderStats] = await Promise.all([
-        sbGet('products', '?order=created_at.desc&select=id,name,price,status,slug'),
+        sbGet('products', '?order=created_at.desc&select=id,name,price,status,slug,image_url'),
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_product_stats`, {
           method: 'POST',
           headers: getSupabaseHeaders(),
@@ -102,7 +102,6 @@
       }));
 
       renderTable(allProducts);
-      loadThumbnails(products.map(p => p.id));
     } catch(e) {
       document.getElementById('productTable').innerHTML =
         `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--red);">Gagal load: ${e.message}</td></tr>`;
@@ -117,7 +116,9 @@
     }
     tbody.innerHTML = products.map(p => {
       const rate = p._total > 0 ? Math.round(p._closing / p._total * 100) : 0;
-      const thumb = `<div class="product-thumb-placeholder" id="thumb-${p.id}">📦</div>`;
+      const thumb = p.image_url
+        ? `<img src="${p.image_url}" class="product-thumb" alt="" style="object-fit:cover;">`
+        : `<div class="product-thumb-placeholder">📦</div>`;
       return `
         <tr>
           <td><input type="checkbox" class="row-check" data-id="${p.id}"></td>
@@ -145,18 +146,6 @@
           </td>
         </tr>`;
     }).join('');
-  }
-
-  async function loadThumbnails(ids) {
-    if (!ids.length) return;
-    try {
-      const imgs = await sbGet('products', `?id=in.(${ids.join(',')})&select=id,image_url`);
-      imgs.forEach(p => {
-        if (!p.image_url) return;
-        const el = document.getElementById('thumb-' + p.id);
-        if (el) el.outerHTML = `<img src="${p.image_url}" class="product-thumb" alt="" style="object-fit:cover;">`;
-      });
-    } catch(e) {}
   }
 
   function filterProducts() {

@@ -2,8 +2,8 @@ const SUPABASE_URL = 'https://bdoodcaxizksnhxunjky.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkb29kY2F4aXprc25oeHVuamt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzNTIxNzYsImV4cCI6MjEwMzkyODE3Nn0.5OX4tunpCbAbaMb7NtEDiuxpxtHw8LoCC4iN1A4Dkds';
 
 // Admin credentials (single login)
-const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'adsy2024';
+const ADMIN_USER = 'Adsy';
+const ADMIN_PASS = 'Sukses2026';
 
 function getSupabaseHeaders() {
   return {

@@ -192,7 +192,7 @@
   }
 
   // ── Meta Pixel browser-side ──────────────────────────────
-  function initPixel(pixelId) {
+  function initPixel(pixelId, viewEvent) {
     if (!pixelId) return;
     !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
     n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
@@ -200,7 +200,8 @@
     t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
     document,'script','https://connect.facebook.net/en_US/fbevents.js');
     fbq('init', pixelId);
-    fbq('track', 'ViewContent');
+    fbq('track', 'PageView');
+    if (viewEvent) fbq('track', viewEvent);
   }
 
   // ── Generate unique event ID for dedup ──────────────────
@@ -260,7 +261,7 @@
       rotatorIndex  = rotator[0]?.last_cs_index || 0;
 
       document.title = product.name + ' — Order';
-      initPixel(product.pixel_id);
+      initPixel(product.pixel_id, checkoutPage.pixel_view_event);
       renderPage();
       document.getElementById('checkoutWrap').style.display = '';
 

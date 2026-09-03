@@ -118,6 +118,17 @@
         </div>
 
         <div class="form-group">
+          <label class="form-label">Event saat Halaman Dibuka</label>
+          <select class="form-control" id="pixelViewEvent">
+            <option value="">— Tidak ada (embed/iframe)</option>
+            <option value="ViewContent">ViewContent</option>
+            <option value="InitiateCheckout">InitiateCheckout</option>
+            <option value="AddToCart">AddToCart</option>
+          </select>
+          <div class="form-hint">Pilih <strong>Tidak ada</strong> jika form di-embed di landing page (pixel sudah di LP). Pilih <strong>InitiateCheckout</strong> jika form dibuka di halaman terpisah.</div>
+        </div>
+
+        <div class="form-group">
           <label class="form-label">Event saat Customer Submit Form</label>
           <select class="form-control" id="pixelEvent" onchange="updateEventInfo()">
             <option value="Lead">Lead</option>
@@ -214,6 +225,7 @@
       btnColor = checkoutPage.button_color || '#F59E0B';
       document.getElementById('btnText').value = checkoutPage.button_text || 'Beli Sekarang';
       document.getElementById('pixelEvent').value = checkoutPage.pixel_event || 'Lead';
+      document.getElementById('pixelViewEvent').value = checkoutPage.pixel_view_event || '';
       btnIcon = checkoutPage.button_icon || 'arrow';
       updateEventInfo();
       renderIconOptions();
@@ -343,7 +355,8 @@
         fields_config: fields,
         button_text:   document.getElementById('btnText').value.trim() || 'Beli Sekarang',
         button_color:  btnColor,
-        pixel_event:   document.getElementById('pixelEvent').value || 'Lead',
+        pixel_event:      document.getElementById('pixelEvent').value || 'Lead',
+        pixel_view_event: document.getElementById('pixelViewEvent').value || null,
         button_icon:   btnIcon || 'arrow',
       });
       showToast('Checkout page disimpan!', 'success');

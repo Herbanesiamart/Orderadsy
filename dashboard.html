@@ -14,9 +14,13 @@
   @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
   .chart-legend { display: flex; gap: 16px; font-size: 12px; color: var(--gray-500); }
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
-  .belum-stat-card { background: var(--gray-50); border-radius: 10px; padding: 14px 12px; text-align: center; }
+  .belum-stat-card { background: var(--gray-50); border-radius: 10px; padding: 14px 12px; text-align: center; cursor: pointer; transition: background .15s, transform .15s; }
+  .belum-stat-card:hover { background: var(--blue-light, #EFF6FF); transform: translateY(-2px); }
   .belum-stat-label { font-size: 12px; color: var(--gray-400); font-weight: 500; margin-bottom: 6px; }
   .belum-stat-value { font-size: 24px; font-weight: 700; color: var(--gray-700); }
+  .belum-order-item { display:flex; align-items:center; gap:12px; padding:12px 20px; border-bottom:1px solid var(--gray-100); }
+  .belum-order-item:last-child { border-bottom: none; }
+  .belum-order-item:hover { background: var(--gray-50); }
   @media (max-width: 600px) { #belumClosingGrid { grid-template-columns: repeat(3,1fr) !important; } }
 </style>
 </head>
@@ -81,29 +85,45 @@
   </div>
 
   <!-- Belum Closing Breakdown -->
-  <div class="card card-body" style="margin-top:0;">
+  <div class="card card-body" style="border-top: 2px solid var(--gray-100);">
     <div class="section-title mb-16">Breakdown Belum Closing</div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;" id="belumClosingGrid">
-      <div class="belum-stat-card">
+      <div class="belum-stat-card" onclick="openBelumModal('pasif','😴 Pasif')">
         <div class="belum-stat-label">😴 Pasif</div>
         <div class="belum-stat-value" id="bcPasif">—</div>
       </div>
-      <div class="belum-stat-card">
+      <div class="belum-stat-card" onclick="openBelumModal('ongkir','🚚 Ongkir')">
         <div class="belum-stat-label">🚚 Ongkir</div>
         <div class="belum-stat-value" id="bcOngkir">—</div>
       </div>
-      <div class="belum-stat-card">
+      <div class="belum-stat-card" onclick="openBelumModal('harga','💰 Harga')">
         <div class="belum-stat-label">💰 Harga</div>
         <div class="belum-stat-value" id="bcHarga">—</div>
       </div>
-      <div class="belum-stat-card">
+      <div class="belum-stat-card" onclick="openBelumModal('ooc','📦 OOC')">
         <div class="belum-stat-label">📦 OOC</div>
         <div class="belum-stat-value" id="bcOOC">—</div>
       </div>
-      <div class="belum-stat-card">
+      <div class="belum-stat-card" onclick="openBelumModal('konsul','💬 Konsul')">
         <div class="belum-stat-label">💬 Konsul</div>
         <div class="belum-stat-value" id="bcKonsul">—</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Belum Closing Detail -->
+<div class="modal-overlay hidden" id="belumModal" onclick="closeBelumModal()">
+  <div class="modal" style="max-width:520px;" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title" id="belumModalTitle">—</div>
+      <button class="modal-close" onclick="closeBelumModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;max-height:420px;overflow-y:auto;" id="belumModalBody">
+      <div style="padding:40px;text-align:center;color:var(--gray-400);">Loading...</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeBelumModal()">Tutup</button>
     </div>
   </div>
 </div>
@@ -308,6 +328,45 @@
           <span class="badge ${cls}">${lbl}</span>
         </div>`;
     }).join('');
+  }
+
+  async function openBelumModal(status, label) {
+    document.getElementById('belumModalTitle').textContent = label;
+    document.getElementById('belumModalBody').innerHTML = `<div style="padding:40px;text-align:center;color:var(--gray-400);">Loading...</div>`;
+    document.getElementById('belumModal').classList.remove('hidden');
+
+    try {
+      const csFilter = getCSId() ? `&cs_id=eq.${getCSId()}` : '';
+      const dateF = _currentFrom && _currentTo
+        ? `&created_at=gte.${_currentFrom.toISOString()}&created_at=lte.${_currentTo.toISOString()}`
+        : '';
+      const orders = await sbGet('orders', `?status=eq.${status}${dateF}${csFilter}&select=id,customer_name,customer_wa,created_at,products(name),cs_team(name)&order=created_at.desc`);
+
+      if (!orders.length) {
+        document.getElementById('belumModalBody').innerHTML = `<div style="padding:40px;text-align:center;color:var(--gray-400);">Tidak ada order</div>`;
+        return;
+      }
+
+      document.getElementById('belumModalBody').innerHTML = orders.map(o => `
+        <div class="belum-order-item">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:14px;">${o.customer_name || '-'}</div>
+            <div style="font-size:12px;color:var(--gray-400);margin-top:2px;">
+              💬 ${o.customer_wa || '-'} &nbsp;·&nbsp; ${o.products?.name || '-'}
+            </div>
+            <div style="font-size:11px;color:var(--gray-400);margin-top:1px;">
+              CS: ${o.cs_team?.name || '-'} &nbsp;·&nbsp; ${timeAgo(o.created_at)}
+            </div>
+          </div>
+          <a href="orders.html?open=${o.id}" class="btn btn-outline btn-sm" style="white-space:nowrap;">Lihat</a>
+        </div>`).join('');
+    } catch(e) {
+      document.getElementById('belumModalBody').innerHTML = `<div style="padding:40px;text-align:center;color:var(--red);">Gagal load</div>`;
+    }
+  }
+
+  function closeBelumModal() {
+    document.getElementById('belumModal').classList.add('hidden');
   }
 </script>
 </body>

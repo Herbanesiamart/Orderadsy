@@ -127,6 +127,7 @@
       <div class="tabs">
         <button class="tab-btn active" onclick="setFollowupTab('welcome',this)">👋 Welcome</button>
         <button class="tab-btn" onclick="setFollowupTab('redirect',this)">🔀 Redirect</button>
+        <button class="tab-btn" onclick="setFollowupTab('followup',this)">💬 Follow Up</button>
       </div>
 
       <!-- Welcome -->
@@ -146,6 +147,35 @@
         <div class="flex gap-8 mt-8 items-center">
           <button class="btn btn-primary" onclick="saveFollowup('welcome')">Simpan</button>
           <button class="btn btn-outline" onclick="resetFollowup('welcome')">Reset Default</button>
+        </div>
+      </div>
+
+      <!-- Follow Up -->
+      <div id="fu-followup" style="display:none;">
+        <div style="font-size:13px;color:var(--gray-500);margin-bottom:12px;">
+          Template follow up untuk CS ketika melakukan follow up ke customer yang belum closing.
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <label style="font-size:13px;font-weight:500;white-space:nowrap;">Pilih Status:</label>
+          <select class="form-control" id="fuSubSelect" style="width:160px;" onchange="switchFuSub(this.value)">
+            <option value="pasif">😴 Pasif</option>
+            <option value="ongkir">🚚 Ongkir</option>
+            <option value="harga">💰 Harga</option>
+            <option value="ooc">📦 OOC</option>
+            <option value="konsul">💬 Konsul</option>
+          </select>
+        </div>
+        <div class="followup-meta-select">
+          <span style="font-size:12px;color:var(--gray-500);align-self:center;">Insert variabel:</span>
+          <button class="variable-chip" onclick="insertVar('fu-followup-text','{{name}}')">{{name}}</button>
+          <button class="variable-chip" onclick="insertVar('fu-followup-text','{{cs_name}}')">{{cs_name}}</button>
+          <button class="variable-chip" onclick="insertVar('fu-followup-text','{{phone}}')">{{phone}}</button>
+          <button class="variable-chip" onclick="insertVar('fu-followup-text','{{address}}')">{{address}}</button>
+          <button class="variable-chip" onclick="insertVar('fu-followup-text','{{product}}')">{{product}}</button>
+        </div>
+        <textarea class="form-control" id="fu-followup-text" style="min-height:180px;font-family:monospace;" placeholder="Tulis template follow up untuk status ini..."></textarea>
+        <div class="flex gap-8 mt-8 items-center">
+          <button class="btn btn-primary" onclick="saveFollowupSub()">Simpan</button>
         </div>
       </div>
 
@@ -308,6 +338,8 @@
       document.getElementById('btnViewCheckout').href = 'checkout.html?slug=' + product.slug;
       document.getElementById('fu-welcome-text').value = product.followup_welcome || '';
       document.getElementById('fu-redirect-text').value = product.followup_redirect || '';
+      window._fuTemplates = product.followup_templates || {};
+      switchFuSub('pasif');
       document.getElementById('editPixelId').value = product.pixel_id || '';
       document.getElementById('editAccessToken').value = product.access_token || '';
 
@@ -429,8 +461,25 @@
   function setFollowupTab(tab, el) {
     document.getElementById('fu-welcome').style.display  = tab === 'welcome'  ? '' : 'none';
     document.getElementById('fu-redirect').style.display = tab === 'redirect' ? '' : 'none';
+    document.getElementById('fu-followup').style.display = tab === 'followup' ? '' : 'none';
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
+  }
+
+  function switchFuSub(status) {
+    document.getElementById('fuSubSelect').value = status;
+    document.getElementById('fu-followup-text').value = (window._fuTemplates || {})[status] || '';
+  }
+
+  async function saveFollowupSub() {
+    const status = document.getElementById('fuSubSelect').value;
+    const val    = document.getElementById('fu-followup-text').value;
+    window._fuTemplates = window._fuTemplates || {};
+    window._fuTemplates[status] = val;
+    try {
+      await sbPatch('products', `?id=eq.${productId}`, { followup_templates: window._fuTemplates });
+      showToast('Template disimpan', 'success');
+    } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
   }
 
   function insertVar(textareaId, variable) {

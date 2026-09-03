@@ -350,14 +350,25 @@
       const dateF = _currentFrom && _currentTo
         ? `&created_at=gte.${_currentFrom.toISOString()}&created_at=lte.${_currentTo.toISOString()}`
         : '';
-      const orders = await sbGet('orders', `?status=eq.${status}${dateF}${csFilter}&select=id,customer_name,customer_wa,created_at,products(name),cs_team(name)&order=created_at.desc`);
+      const orders = await sbGet('orders', `?status=eq.${status}${dateF}${csFilter}&select=id,customer_name,customer_wa,customer_address,customer_city,created_at,products(name,followup_templates),cs_team(name)&order=created_at.desc`);
 
       if (!orders.length) {
         body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);">Tidak ada order dengan status ini</div>`;
         return;
       }
 
-      body.innerHTML = orders.map(o => `
+      body.innerHTML = orders.map(o => {
+        const waNum = (o.customer_wa || '').replace(/\D/g, '');
+        const template = o.products?.followup_templates?.[status] ||
+          'Halo Kak {{name}}, saya {{cs_name}}. Mau follow up mengenai orderan {{product}} kak, ada yang bisa kami bantu? 😊';
+        const msg = template
+          .replace(/\{\{name\}\}/gi,    o.customer_name || '')
+          .replace(/\{\{cs_name\}\}/gi, o.cs_team?.name || '')
+          .replace(/\{\{phone\}\}/gi,   o.customer_wa || '')
+          .replace(/\{\{address\}\}/gi, [o.customer_address, o.customer_city].filter(Boolean).join(', '))
+          .replace(/\{\{product\}\}/gi, o.products?.name || '');
+        const waUrl = `https://wa.me/${waNum}?text=${encodeURIComponent(msg)}`;
+        return `
         <div class="belum-order-item">
           <div style="flex:1;min-width:0;">
             <div style="font-weight:600;font-size:14px;">${o.customer_name || '-'}</div>
@@ -368,8 +379,9 @@
               CS: ${o.cs_team?.name || '-'} &nbsp;·&nbsp; ${timeAgo(o.created_at)}
             </div>
           </div>
-          <a href="orders.html?open=${o.id}" class="btn btn-outline btn-sm" style="white-space:nowrap;flex-shrink:0;">Lihat</a>
-        </div>`).join('');
+          <a href="${waUrl}" target="_blank" class="btn btn-accent btn-sm" style="white-space:nowrap;flex-shrink:0;">💬 Follow Up</a>
+        </div>`;
+      }).join('');
     } catch(e) {
       body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--red);">Gagal load</div>`;
     }

@@ -414,7 +414,8 @@
       const orderData = await orderRes.json();
       const orderId = orderData[0]?.id;
       const cr = countRes?.headers?.get('Content-Range') || '';
-      const orderNumberToday = parseInt(cr.split('/')[1] || '1') || 1;
+      // +1 karena count jalan paralel bareng INSERT, belum tentu hitung orderan baru ini
+      const orderNumberToday = (parseInt(cr.split('/')[1] || '0') || 0) + 1;
 
       // 2-5. Semua background tasks — fire and forget, tidak perlu ditunggu
       const capiEvent = checkoutPage.pixel_event || 'Lead';

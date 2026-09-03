@@ -78,16 +78,21 @@
       ? `&created_at=gte.${from.toISOString()}&created_at=lte.${to.toISOString()}`
       : '';
     try {
+      const rpcBody = {};
+      if (from && to) { rpcBody.from_date = from.toISOString(); rpcBody.to_date = to.toISOString(); }
+
       const [products, orderStats] = await Promise.all([
         sbGet('products', '?order=created_at.desc&select=id,name,price,status,slug'),
-        sbGet('orders', `?select=product_id,status${dateFilter}&limit=5000`).catch(() => [])
+        fetch(`${SUPABASE_URL}/rest/v1/rpc/get_product_stats`, {
+          method: 'POST',
+          headers: getSupabaseHeaders(),
+          body: JSON.stringify(rpcBody),
+        }).then(r => r.json()).catch(() => [])
       ]);
 
       const statsMap = {};
-      orderStats.forEach(o => {
-        if (!statsMap[o.product_id]) statsMap[o.product_id] = { total: 0, closing: 0 };
-        statsMap[o.product_id].total++;
-        if (o.status === 'closing') statsMap[o.product_id].closing++;
+      (orderStats || []).forEach(o => {
+        statsMap[o.product_id] = { total: Number(o.total), closing: Number(o.closing) };
       });
 
       allProducts = products.map(p => ({

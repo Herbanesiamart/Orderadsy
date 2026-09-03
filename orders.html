@@ -48,11 +48,12 @@
             <th>Waktu</th>
             <th>Status</th>
             <th>Keterangan</th>
+            <th>Follow Up</th>
             <th>Aksi</th>
           </tr>
         </thead>
         <tbody id="ordersTable">
-          <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--gray-400);">Loading...</td></tr>
+          <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--gray-400);">Loading...</td></tr>
         </tbody>
       </table>
     </div>
@@ -228,7 +229,7 @@
   function renderOrders(orders) {
     const tbody = document.getElementById('ordersTable');
     if (!orders.length) {
-      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">Tidak ada order</div></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">Tidak ada order</div></div></td></tr>`;
       return;
     }
     const statusMap = {
@@ -256,6 +257,9 @@
         <td data-label="Keterangan" onclick="event.stopPropagation()">
           ${renderKetCell(o.id, o.status)}
         </td>
+        <td data-label="Follow Up" onclick="event.stopPropagation()">
+          ${renderFUBadge(o)}
+        </td>
         <td data-label="" onclick="event.stopPropagation()">
           <button class="btn btn-outline btn-sm" onclick="openWADirect('${o.customer_wa}','${o.id}')">💬 WA</button>
         </td>
@@ -263,6 +267,32 @@
   }
 
   const BELUM_CLOSING = new Set(['pasif','ongkir','harga','ooc','konsul']);
+
+  function renderFUBadge(o) {
+    if (!o.fu_count) {
+      return `<span id="fu-badge-${o.id}" class="badge badge-gray" style="cursor:pointer;font-size:11px;" onclick="recordFU('${o.id}')">Belum FU</span>`;
+    }
+    return `<div id="fu-badge-${o.id}" style="cursor:pointer;" onclick="recordFU('${o.id}')">
+      <span class="badge badge-blue" style="font-size:11px;">FU ${o.fu_count}x</span>
+      <div style="font-size:10px;color:var(--gray-400);margin-top:2px;">${timeAgo(o.last_fu_at)}</div>
+    </div>`;
+  }
+
+  async function recordFU(id) {
+    const o = allOrders.find(o => o.id === id);
+    if (!o) return;
+    const newCount = (o.fu_count || 0) + 1;
+    const now = new Date().toISOString();
+    try {
+      await sbPatch('orders', `?id=eq.${id}`, { fu_count: newCount, last_fu_at: now });
+      o.fu_count = newCount;
+      o.last_fu_at = now;
+      const el = document.getElementById('fu-badge-' + id);
+      if (el) el.outerHTML = renderFUBadge(o);
+    } catch(e) {
+      showToast('Gagal catat FU: ' + e.message, 'error');
+    }
+  }
 
   function renderStatusCell(id, status) {
     const isBelum = BELUM_CLOSING.has(status);

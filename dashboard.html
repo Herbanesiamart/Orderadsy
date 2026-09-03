@@ -381,7 +381,7 @@
       const dateF = _currentFrom && _currentTo
         ? `&created_at=gte.${_currentFrom.toISOString()}&created_at=lte.${_currentTo.toISOString()}`
         : '';
-      const orders = await sbGet('orders', `?status=eq.${status}${dateF}${csFilter}${productFilter}&select=id,customer_name,customer_wa,customer_address,customer_city,created_at,products(name,followup_templates),cs_team(name)&order=created_at.desc`);
+      const orders = await sbGet('orders', `?status=eq.${status}${dateF}${csFilter}${productFilter}&select=id,customer_name,customer_wa,customer_address,customer_city,created_at,fu_count,last_fu_at,products(name,followup_templates),cs_team(name)&order=created_at.desc`);
 
       if (!orders.length) {
         body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);">Tidak ada order dengan status ini</div>`;
@@ -399,6 +399,9 @@
           .replace(/\{\{address\}\}/gi, [o.customer_address, o.customer_city].filter(Boolean).join(', '))
           .replace(/\{\{product\}\}/gi, o.products?.name || '');
         const waUrl = `https://wa.me/${waNum}?text=${encodeURIComponent(msg)}`;
+        const fuBadge = o.fu_count
+          ? `<span style="font-size:11px;color:var(--primary);font-weight:500;">FU ${o.fu_count}x · ${timeAgo(o.last_fu_at)}</span>`
+          : `<span style="font-size:11px;color:var(--gray-400);">Belum FU</span>`;
         return `
         <div class="belum-order-item">
           <div style="flex:1;min-width:0;">
@@ -409,13 +412,26 @@
             <div style="font-size:11px;color:var(--gray-400);margin-top:1px;">
               CS: ${o.cs_team?.name || '-'} &nbsp;·&nbsp; ${timeAgo(o.created_at)}
             </div>
+            <div style="margin-top:3px;" id="dash-fu-${o.id}">${fuBadge}</div>
           </div>
-          <a href="${waUrl}" target="_blank" class="btn btn-accent btn-sm" style="white-space:nowrap;flex-shrink:0;">💬 Follow Up</a>
+          <a href="${waUrl}" target="_blank" class="btn btn-accent btn-sm" style="white-space:nowrap;flex-shrink:0;" onclick="dashRecordFU('${o.id}')">💬 Follow Up</a>
         </div>`;
       }).join('');
     } catch(e) {
       body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--red);">Gagal load</div>`;
     }
+  }
+
+  async function dashRecordFU(id) {
+    try {
+      const res = await sbGet('orders', `?id=eq.${id}&select=fu_count,last_fu_at`);
+      const cur = res[0] || {};
+      const newCount = (cur.fu_count || 0) + 1;
+      const now = new Date().toISOString();
+      await sbPatch('orders', `?id=eq.${id}`, { fu_count: newCount, last_fu_at: now });
+      const el = document.getElementById('dash-fu-' + id);
+      if (el) el.innerHTML = `<span style="font-size:11px;color:var(--primary);font-weight:500;">FU ${newCount}x · baru saja</span>`;
+    } catch(e) {}
   }
 
   function closeBelumDetail() {

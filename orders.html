@@ -20,7 +20,7 @@
       <select class="form-control" id="filterProduct" style="width:170px;" onchange="loadOrders(1)">
         <option value="">Semua Produk</option>
       </select>
-      <select class="form-control" id="filterCS" style="width:150px;" onchange="loadOrders(1)" ${getCSId ? '' : ''}>
+      <select class="form-control" id="filterCS" style="width:150px;" onchange="loadOrders(1)">
         <option value="">Semua CS</option>
       </select>
       <select class="form-control" id="filterStatus" style="width:160px;" onchange="loadOrders(1)">
@@ -190,18 +190,20 @@
     const search = document.getElementById('searchInput').value.trim();
     const offset = (page - 1) * PAGE_SIZE;
 
-    const productId = document.getElementById('filterProduct').value;
-    const filterCSId = document.getElementById('filterCS').value;
-    let filter = status    ? `status=eq.${status}&` : '';
-    if (productId) filter += `product_id=eq.${productId}&`;
-    if (search)    filter += `customer_name=ilike.*${encodeURIComponent(search)}*&`;
-    if (getCSId())    filter += `cs_id=eq.${getCSId()}&`;
-    else if (filterCSId) filter += `cs_id=eq.${filterCSId}&`;
-    if (_dateFrom) filter += `created_at=gte.${_dateFrom.toISOString()}&`;
-    if (_dateTo)   filter += `created_at=lte.${_dateTo.toISOString()}&`;
+    const productId  = document.getElementById('filterProduct').value;
+    const csIdFilter = getCSId() || document.getElementById('filterCS').value;
 
-    const countQ = `?${filter}select=id`;
-    const dataQ  = `?${filter}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,products(name,followup_welcome),cs_team(name,wa_number),checkout_pages(fields_config)`;
+    const f = [];
+    if (status)      f.push(`status=eq.${status}`);
+    if (productId)   f.push(`product_id=eq.${productId}`);
+    if (csIdFilter)  f.push(`cs_id=eq.${csIdFilter}`);
+    if (search)      f.push(`customer_name=ilike.*${encodeURIComponent(search)}*`);
+    if (_dateFrom)   f.push(`created_at=gte.${_dateFrom.toISOString()}`);
+    if (_dateTo)     f.push(`created_at=lte.${_dateTo.toISOString()}`);
+
+    const filterStr = f.length ? f.join('&') + '&' : '';
+    const countQ = `?${filterStr}select=id`;
+    const dataQ  = `?${filterStr}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,products(name,followup_welcome),cs_team(name,wa_number),checkout_pages(fields_config)`;
 
     try {
       document.getElementById('ordersTable').innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--gray-400);">Loading...</td></tr>`;

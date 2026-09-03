@@ -35,29 +35,29 @@
       <select class="form-control" id="productFilter" style="width:180px;" onchange="loadDashboard(_currentFrom,_currentTo)">
         <option value="">Semua Produk</option>
       </select>
-      <button class="date-filter-btn" id="dateFilterBtn">📅 <span class="df-label">Last 30 Days</span> ▾</button>
+      <button class="date-filter-btn" id="dateFilterBtn"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span class="df-label">Last 30 Days</span> ▾</button>
     </div>
   </div>
 
   <!-- KPI Cards -->
   <div class="kpi-grid" id="kpiGrid">
     <div class="kpi-card">
-      <div class="kpi-icon blue">🛒</div>
+      <div class="kpi-icon blue"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
       <div class="kpi-label">Total Orders</div>
       <div class="kpi-value blue" id="kpiOrders">—</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-icon green">✅</div>
+      <div class="kpi-icon green"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
       <div class="kpi-label">Total Closing</div>
       <div class="kpi-value green" id="kpiClosing">—</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-icon orange">%</div>
+      <div class="kpi-icon orange"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>
       <div class="kpi-label">Closing Rate</div>
       <div class="kpi-value orange" id="kpiRate">—</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-icon red">⏳</div>
+      <div class="kpi-icon red"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
       <div class="kpi-label">Belum Closing</div>
       <div class="kpi-value red" id="kpiPending">—</div>
     </div>
@@ -93,24 +93,24 @@
   <div class="card card-body" style="margin-top:8px;">
     <div class="section-title mb-16">Breakdown Belum Closing</div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;" id="belumClosingGrid">
-      <div class="belum-stat-card" onclick="openBelumModal('pasif','😴 Pasif')">
-        <div class="belum-stat-label">😴 Pasif</div>
+      <div class="belum-stat-card" onclick="openBelumModal('pasif','Pasif')">
+        <div class="belum-stat-label"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Pasif</div>
         <div class="belum-stat-value" id="bcPasif">—</div>
       </div>
-      <div class="belum-stat-card" onclick="openBelumModal('ongkir','🚚 Ongkir')">
-        <div class="belum-stat-label">🚚 Ongkir</div>
+      <div class="belum-stat-card" onclick="openBelumModal('ongkir','Ongkir')">
+        <div class="belum-stat-label"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>Ongkir</div>
         <div class="belum-stat-value" id="bcOngkir">—</div>
       </div>
-      <div class="belum-stat-card" onclick="openBelumModal('harga','💰 Harga')">
-        <div class="belum-stat-label">💰 Harga</div>
+      <div class="belum-stat-card" onclick="openBelumModal('harga','Harga')">
+        <div class="belum-stat-label"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Harga</div>
         <div class="belum-stat-value" id="bcHarga">—</div>
       </div>
-      <div class="belum-stat-card" onclick="openBelumModal('ooc','📦 OOC')">
-        <div class="belum-stat-label">📦 OOC</div>
+      <div class="belum-stat-card" onclick="openBelumModal('ooc','OOC')">
+        <div class="belum-stat-label"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><line x1="12" y1="12" x2="12" y2="12.01"/></svg>OOC</div>
         <div class="belum-stat-value" id="bcOOC">—</div>
       </div>
-      <div class="belum-stat-card" onclick="openBelumModal('konsul','💬 Konsul')">
-        <div class="belum-stat-label">💬 Konsul</div>
+      <div class="belum-stat-card" onclick="openBelumModal('konsul','Konsul')">
+        <div class="belum-stat-label"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Konsul</div>
         <div class="belum-stat-value" id="bcKonsul">—</div>
       </div>
     </div>

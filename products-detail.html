@@ -211,8 +211,9 @@
   <div id="tab-assignation" style="display:none;">
     <div class="card card-body">
       <div class="section-title mb-4">👥 CS yang Di-assign ke Produk Ini</div>
-      <div class="form-hint mb-16">Jika lebih dari 1 CS, order dirotasi round-robin otomatis.</div>
-      <div id="assignCS"></div>
+      <div class="form-hint mb-12">Jika lebih dari 1 CS, order dirotasi round-robin otomatis.</div>
+      <input type="text" class="form-control mb-12" id="searchCS" placeholder="Cari nama CS..." style="max-width:300px;" oninput="filterCS(this.value)">
+      <div id="assignCS" style="max-height:320px;overflow-y:auto;padding-right:4px;"></div>
       <hr class="divider">
       <button class="btn btn-primary" onclick="saveAssignation()">Simpan Perubahan</button>
     </div>
@@ -438,6 +439,14 @@
           <div style="font-size:11px;color:var(--gray-400);">${cs.wa_number}</div>
         </div>
       </div>`).join('');
+  }
+
+  function filterCS(q) {
+    const keyword = q.toLowerCase();
+    document.querySelectorAll('#assignCS .cs-item').forEach(el => {
+      const name = el.querySelector('[style*="font-weight"]')?.textContent?.toLowerCase() || '';
+      el.style.display = name.includes(keyword) ? '' : 'none';
+    });
   }
 
   function toggleAssignCS(id) {

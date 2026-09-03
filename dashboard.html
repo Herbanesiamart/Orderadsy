@@ -14,6 +14,10 @@
   @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
   .chart-legend { display: flex; gap: 16px; font-size: 12px; color: var(--gray-500); }
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+  .belum-stat-card { background: var(--gray-50); border-radius: 10px; padding: 14px 12px; text-align: center; }
+  .belum-stat-label { font-size: 12px; color: var(--gray-400); font-weight: 500; margin-bottom: 6px; }
+  .belum-stat-value { font-size: 24px; font-weight: 700; color: var(--gray-700); }
+  @media (max-width: 600px) { #belumClosingGrid { grid-template-columns: repeat(3,1fr) !important; } }
 </style>
 </head>
 <body>
@@ -72,6 +76,33 @@
           <div class="empty-state-icon">📭</div>
           <div class="empty-state-text">Belum ada order</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Belum Closing Breakdown -->
+  <div class="card card-body" style="margin-top:0;">
+    <div class="section-title mb-16">Breakdown Belum Closing</div>
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;" id="belumClosingGrid">
+      <div class="belum-stat-card">
+        <div class="belum-stat-label">😴 Pasif</div>
+        <div class="belum-stat-value" id="bcPasif">—</div>
+      </div>
+      <div class="belum-stat-card">
+        <div class="belum-stat-label">🚚 Ongkir</div>
+        <div class="belum-stat-value" id="bcOngkir">—</div>
+      </div>
+      <div class="belum-stat-card">
+        <div class="belum-stat-label">💰 Harga</div>
+        <div class="belum-stat-value" id="bcHarga">—</div>
+      </div>
+      <div class="belum-stat-card">
+        <div class="belum-stat-label">📦 OOC</div>
+        <div class="belum-stat-value" id="bcOOC">—</div>
+      </div>
+      <div class="belum-stat-card">
+        <div class="belum-stat-label">💬 Konsul</div>
+        <div class="belum-stat-value" id="bcKonsul">—</div>
       </div>
     </div>
   </div>
@@ -146,17 +177,27 @@
       const baseFilter = `${dateF}${csFilter}`;
 
       // Parallel count queries — jauh lebih cepat dari fetch semua baris
-      const [total, closing, pending] = await Promise.all([
+      const [total, closing, belumClosing, bcPasif, bcOngkir, bcHarga, bcOOC, bcKonsul] = await Promise.all([
         sbCount('orders', baseFilter),
         sbCount('orders', `${baseFilter}&status=eq.closing`),
         sbCount('orders', `${baseFilter}&status=in.(pasif,ongkir,harga,ooc,konsul)`),
+        sbCount('orders', `${baseFilter}&status=eq.pasif`),
+        sbCount('orders', `${baseFilter}&status=eq.ongkir`),
+        sbCount('orders', `${baseFilter}&status=eq.harga`),
+        sbCount('orders', `${baseFilter}&status=eq.ooc`),
+        sbCount('orders', `${baseFilter}&status=eq.konsul`),
       ]);
 
       const rate = total > 0 ? Math.round(closing / total * 100) : 0;
       document.getElementById('kpiOrders').textContent  = total.toLocaleString('id-ID');
       document.getElementById('kpiClosing').textContent = closing.toLocaleString('id-ID');
       document.getElementById('kpiRate').textContent    = rate + '%';
-      document.getElementById('kpiPending').textContent = pending.toLocaleString('id-ID');
+      document.getElementById('kpiPending').textContent = belumClosing.toLocaleString('id-ID');
+      document.getElementById('bcPasif').textContent   = bcPasif.toLocaleString('id-ID');
+      document.getElementById('bcOngkir').textContent  = bcOngkir.toLocaleString('id-ID');
+      document.getElementById('bcHarga').textContent   = bcHarga.toLocaleString('id-ID');
+      document.getElementById('bcOOC').textContent     = bcOOC.toLocaleString('id-ID');
+      document.getElementById('bcKonsul').textContent  = bcKonsul.toLocaleString('id-ID');
 
       // Chart: fetch hanya created_at + status, limit 2000
       const chartParams = [`select=status,created_at`, `limit=2000`];

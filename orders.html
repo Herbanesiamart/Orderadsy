@@ -44,11 +44,12 @@
             <th>CS Handle</th>
             <th>Waktu</th>
             <th>Status</th>
+            <th>Keterangan</th>
             <th>Aksi</th>
           </tr>
         </thead>
         <tbody id="ordersTable">
-          <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--gray-400);">Loading...</td></tr>
+          <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--gray-400);">Loading...</td></tr>
         </tbody>
       </table>
     </div>
@@ -156,7 +157,7 @@
     const dataQ  = `?${filter}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,products(name,followup_welcome),cs_team(name,wa_number),checkout_pages(fields_config)`;
 
     try {
-      document.getElementById('ordersTable').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--gray-400);">Loading...</td></tr>`;
+      document.getElementById('ordersTable').innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--gray-400);">Loading...</td></tr>`;
       const [orders, countRes] = await Promise.all([
         sbGet('orders', dataQ),
         sbGet('orders', countQ)
@@ -178,7 +179,7 @@
         window._pendingOpenId = null;
       }
     } catch(e) {
-      document.getElementById('ordersTable').innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--red);">Gagal load: ${e.message}</td></tr>`;
+      document.getElementById('ordersTable').innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--red);">Gagal load: ${e.message}</td></tr>`;
     }
   }
 
@@ -204,7 +205,7 @@
   function renderOrders(orders) {
     const tbody = document.getElementById('ordersTable');
     if (!orders.length) {
-      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">Tidak ada order</div></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-text">Tidak ada order</div></div></td></tr>`;
       return;
     }
     const statusMap = {
@@ -229,6 +230,9 @@
         <td data-label="Status" onclick="event.stopPropagation()">
           ${renderStatusCell(o.id, o.status)}
         </td>
+        <td data-label="Keterangan" onclick="event.stopPropagation()">
+          ${renderKetCell(o.id, o.status)}
+        </td>
         <td data-label="" onclick="event.stopPropagation()">
           <button class="btn btn-outline btn-sm" onclick="openWADirect('${o.customer_wa}','${o.id}')">💬 WA</button>
         </td>
@@ -240,32 +244,37 @@
   function renderStatusCell(id, status) {
     const isBelum = BELUM_CLOSING.has(status);
     const mainVal = isBelum ? '_belum' : status;
-    const subSelect = isBelum ? `
-      <select class="form-control" style="width:110px;padding:4px 8px;font-size:12px;margin-top:4px;" onchange="updateStatus('${id}',this.value)">
+    return `<div id="status-cell-${id}">
+      <select class="form-control" style="width:120px;padding:4px 8px;font-size:12px;" onchange="onMainStatus('${id}',this.value)">
+        <option value="pending" ${mainVal==='pending'?'selected':''}>Lead Baru</option>
+        <option value="closing" ${mainVal==='closing'?'selected':''}>Closing</option>
+        <option value="_belum"  ${isBelum         ?'selected':''}>Belum Closing</option>
+      </select>
+    </div>`;
+  }
+
+  function renderKetCell(id, status) {
+    const isBelum = BELUM_CLOSING.has(status);
+    if (!isBelum) return `<div id="ket-cell-${id}" style="color:var(--gray-300);font-size:13px;">—</div>`;
+    return `<div id="ket-cell-${id}">
+      <select class="form-control" style="width:110px;padding:4px 8px;font-size:12px;" onchange="updateStatus('${id}',this.value)">
         <option value="pasif"  ${status==='pasif' ?'selected':''}>Pasif</option>
         <option value="ongkir" ${status==='ongkir'?'selected':''}>Ongkir</option>
         <option value="harga"  ${status==='harga' ?'selected':''}>Harga</option>
         <option value="ooc"    ${status==='ooc'   ?'selected':''}>OOC</option>
         <option value="konsul" ${status==='konsul'?'selected':''}>Konsul</option>
-      </select>` : '';
-    return `<div id="status-cell-${id}">
-      <select class="form-control" style="width:110px;padding:4px 8px;font-size:12px;" onchange="onMainStatus('${id}',this.value)">
-        <option value="pending" ${mainVal==='pending'?'selected':''}>Lead Baru</option>
-        <option value="closing" ${mainVal==='closing'?'selected':''}>Closing</option>
-        <option value="_belum"  ${isBelum         ?'selected':''}>Belum Closing</option>
       </select>
-      ${subSelect}
     </div>`;
   }
 
   function onMainStatus(id, val) {
     if (val === '_belum') {
-      // Show sub-dropdown immediately, default to 'pasif' (no DB update yet)
+      // Tampilkan sub-dropdown langsung di kolom Keterangan, default pasif (belum ke DB)
       const o = allOrders.find(o => o.id === id);
       if (o) {
         o.status = 'pasif';
-        const cell = document.getElementById('status-cell-' + id);
-        if (cell) cell.outerHTML = renderStatusCell(id, 'pasif');
+        const ketCell = document.getElementById('ket-cell-' + id);
+        if (ketCell) ketCell.outerHTML = renderKetCell(id, 'pasif');
       }
     } else {
       updateStatus(id, val);
@@ -279,9 +288,11 @@
       const o = allOrders.find(o => o.id === id);
       if (o) {
         o.status = status;
-        // Re-render only this cell in place
+        // Re-render status + keterangan cell in place
         const cell = document.getElementById('status-cell-' + id);
         if (cell) cell.outerHTML = renderStatusCell(id, status);
+        const ketCell = document.getElementById('ket-cell-' + id);
+        if (ketCell) ketCell.outerHTML = renderKetCell(id, status);
       }
 
       // Kirim Purchase event ke Meta CAPI saat status → closing

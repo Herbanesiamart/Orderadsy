@@ -21,7 +21,7 @@
   .belum-order-item { display:flex; align-items:center; gap:12px; padding:12px 20px; border-bottom:1px solid var(--gray-100); }
   .belum-order-item:last-child { border-bottom: none; }
   .belum-order-item:hover { background: var(--gray-50); }
-  @media (max-width: 600px) { #belumClosingGrid { grid-template-columns: repeat(3,1fr) !important; } }
+  @media (max-width: 700px) { #belumClosingGrid { grid-template-columns: repeat(3,1fr) !important; } }
 </style>
 </head>
 <body>
@@ -92,7 +92,11 @@
   <!-- Belum Closing Breakdown -->
   <div class="card card-body" style="margin-top:8px;">
     <div class="section-title mb-16">Breakdown Belum Closing</div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;" id="belumClosingGrid">
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;" id="belumClosingGrid">
+      <div class="belum-stat-card" onclick="openBelumModal('pending','Lead Baru')">
+        <div class="belum-stat-label"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="21" y1="8" x2="21" y2="14"/><line x1="24" y1="11" x2="18" y2="11"/></svg>Lead Baru</div>
+        <div class="belum-stat-value" id="bcLeadBaru">—</div>
+      </div>
       <div class="belum-stat-card" onclick="openBelumModal('pasif','Pasif')">
         <div class="belum-stat-label"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Pasif</div>
         <div class="belum-stat-value" id="bcPasif">—</div>
@@ -223,7 +227,8 @@
       // Hitung semua KPI client-side dari 1 dataset
       const total       = orders.length;
       const closing     = orders.filter(o => o.status === 'closing').length;
-      const belumClosing= orders.filter(o => BELUM_SET.has(o.status)).length;
+      const belumClosing= total - closing; // semua yang bukan closing = belum closing
+      const bcLeadBaru  = orders.filter(o => o.status === 'pending').length;
       const bcPasif     = orders.filter(o => o.status === 'pasif').length;
       const bcOngkir    = orders.filter(o => o.status === 'ongkir').length;
       const bcHarga     = orders.filter(o => o.status === 'harga').length;
@@ -235,6 +240,7 @@
       document.getElementById('kpiClosing').textContent = closing.toLocaleString('id-ID');
       document.getElementById('kpiRate').textContent    = rate + '%';
       document.getElementById('kpiPending').textContent = belumClosing.toLocaleString('id-ID');
+      document.getElementById('bcLeadBaru').textContent = bcLeadBaru.toLocaleString('id-ID');
       document.getElementById('bcPasif').textContent    = bcPasif.toLocaleString('id-ID');
       document.getElementById('bcOngkir').textContent   = bcOngkir.toLocaleString('id-ID');
       document.getElementById('bcHarga').textContent    = bcHarga.toLocaleString('id-ID');

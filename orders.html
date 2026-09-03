@@ -253,11 +253,12 @@
     </div>`;
   }
 
-  function renderKetCell(id, status) {
+  function renderKetCell(id, status, pending = false) {
     const isBelum = BELUM_CLOSING.has(status);
-    if (!isBelum) return `<div id="ket-cell-${id}" style="color:var(--gray-300);font-size:13px;">—</div>`;
+    if (!isBelum && !pending) return `<div id="ket-cell-${id}" style="color:var(--gray-300);font-size:13px;">—</div>`;
     return `<div id="ket-cell-${id}">
-      <select class="form-control" style="width:110px;padding:4px 8px;font-size:12px;" onchange="updateStatus('${id}',this.value)">
+      <select class="form-control" style="width:130px;padding:4px 8px;font-size:12px;" onchange="updateStatus('${id}',this.value)">
+        ${pending ? `<option value="" disabled selected>Pilih Keterangan</option>` : ''}
         <option value="pasif"  ${status==='pasif' ?'selected':''}>Pasif</option>
         <option value="ongkir" ${status==='ongkir'?'selected':''}>Ongkir</option>
         <option value="harga"  ${status==='harga' ?'selected':''}>Harga</option>
@@ -269,13 +270,9 @@
 
   function onMainStatus(id, val) {
     if (val === '_belum') {
-      // Tampilkan sub-dropdown langsung di kolom Keterangan, default pasif (belum ke DB)
-      const o = allOrders.find(o => o.id === id);
-      if (o) {
-        o.status = 'pasif';
-        const ketCell = document.getElementById('ket-cell-' + id);
-        if (ketCell) ketCell.outerHTML = renderKetCell(id, 'pasif');
-      }
+      // Tampilkan sub-dropdown dengan "Pilih Keterangan", belum save ke DB
+      const ketCell = document.getElementById('ket-cell-' + id);
+      if (ketCell) ketCell.outerHTML = renderKetCell(id, '', true);
     } else {
       updateStatus(id, val);
     }

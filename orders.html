@@ -17,16 +17,17 @@
   <div class="page-header">
     <div class="page-title">Orders</div>
     <div class="flex gap-8 flex-wrap orders-filter-row">
-      <select class="form-control" id="filterStatus" style="width:150px;" onchange="loadOrders(1)">
+      <select class="form-control" id="filterStatus" style="width:160px;" onchange="loadOrders(1)">
         <option value="">Semua Status</option>
-        <option value="pending">Pending</option>
+        <option value="pending">Lead Baru</option>
         <option value="closing">Closing</option>
-        <option value="cancel">Cancel</option>
-        <option value="pasif">Pasif</option>
-        <option value="ongkir">Ongkir</option>
-        <option value="harga">Harga</option>
-        <option value="ooc">OOC</option>
-        <option value="konsul">Konsul</option>
+        <optgroup label="Belum Closing">
+          <option value="pasif">· Pasif</option>
+          <option value="ongkir">· Ongkir</option>
+          <option value="harga">· Harga</option>
+          <option value="ooc">· OOC</option>
+          <option value="konsul">· Konsul</option>
+        </optgroup>
       </select>
       <input type="text" class="form-control" id="searchInput" placeholder="Cari nama customer..." style="width:220px;" oninput="filterOrders()">
       <button class="date-filter-btn" id="dateFilterBtn">📅 <span class="df-label">Last 30 Days</span> ▾</button>
@@ -207,14 +208,13 @@
       return;
     }
     const statusMap = {
-      pending: ['badge-orange',  'Pending'],
-      closing: ['badge-green',   'Closing'],
-      cancel:  ['badge-red',     'Cancel'],
-      pasif:   ['badge-gray',    'Pasif'],
-      ongkir:  ['badge-purple',  'Ongkir'],
-      harga:   ['badge-purple',  'Harga'],
-      ooc:     ['badge-gray',    'OOC'],
-      konsul:  ['badge-blue',    'Konsul'],
+      pending: ['badge-orange', 'Lead Baru'],
+      closing: ['badge-green',  'Closing'],
+      pasif:   ['badge-gray',   'Pasif'],
+      ongkir:  ['badge-purple', 'Ongkir'],
+      harga:   ['badge-purple', 'Harga'],
+      ooc:     ['badge-gray',   'OOC'],
+      konsul:  ['badge-blue',   'Konsul'],
     };
     tbody.innerHTML = orders.map(o => `
       <tr style="cursor:pointer;" onclick="openDetail('${o.id}')">
@@ -227,18 +227,7 @@
         <td data-label="CS">${o.cs_team?.name || '-'}</td>
         <td data-label="Waktu" style="font-size:12px;color:var(--gray-400);">${timeAgo(o.created_at)}</td>
         <td data-label="Status" onclick="event.stopPropagation()">
-          <select class="form-control" style="width:110px;padding:4px 8px;font-size:12px;" onchange="updateStatus('${o.id}',this.value)">
-            <option value="pending" ${o.status==='pending'?'selected':''}>Pending</option>
-            <option value="closing" ${o.status==='closing'?'selected':''}>Closing</option>
-            <option value="cancel"  ${o.status==='cancel'?'selected':''}>Cancel</option>
-            <optgroup label="── Alasan ──">
-            <option value="pasif"   ${o.status==='pasif'?'selected':''}>Pasif</option>
-            <option value="ongkir"  ${o.status==='ongkir'?'selected':''}>Ongkir</option>
-            <option value="harga"   ${o.status==='harga'?'selected':''}>Harga</option>
-            <option value="ooc"     ${o.status==='ooc'?'selected':''}>OOC</option>
-            <option value="konsul"  ${o.status==='konsul'?'selected':''}>Konsul</option>
-            </optgroup>
-          </select>
+          ${renderStatusCell(o.id, o.status)}
         </td>
         <td data-label="" onclick="event.stopPropagation()">
           <button class="btn btn-outline btn-sm" onclick="openWADirect('${o.customer_wa}','${o.id}')">💬 WA</button>
@@ -246,17 +235,60 @@
       </tr>`).join('');
   }
 
+  const BELUM_CLOSING = new Set(['pasif','ongkir','harga','ooc','konsul']);
+
+  function renderStatusCell(id, status) {
+    const isBelum = BELUM_CLOSING.has(status);
+    const mainVal = isBelum ? '_belum' : status;
+    const subSelect = isBelum ? `
+      <select class="form-control" style="width:110px;padding:4px 8px;font-size:12px;margin-top:4px;" onchange="updateStatus('${id}',this.value)">
+        <option value="pasif"  ${status==='pasif' ?'selected':''}>Pasif</option>
+        <option value="ongkir" ${status==='ongkir'?'selected':''}>Ongkir</option>
+        <option value="harga"  ${status==='harga' ?'selected':''}>Harga</option>
+        <option value="ooc"    ${status==='ooc'   ?'selected':''}>OOC</option>
+        <option value="konsul" ${status==='konsul'?'selected':''}>Konsul</option>
+      </select>` : '';
+    return `<div id="status-cell-${id}">
+      <select class="form-control" style="width:110px;padding:4px 8px;font-size:12px;" onchange="onMainStatus('${id}',this.value)">
+        <option value="pending" ${mainVal==='pending'?'selected':''}>Lead Baru</option>
+        <option value="closing" ${mainVal==='closing'?'selected':''}>Closing</option>
+        <option value="_belum"  ${isBelum         ?'selected':''}>Belum Closing</option>
+      </select>
+      ${subSelect}
+    </div>`;
+  }
+
+  function onMainStatus(id, val) {
+    if (val === '_belum') {
+      // Show sub-dropdown immediately, default to 'pasif' (no DB update yet)
+      const o = allOrders.find(o => o.id === id);
+      if (o) {
+        o.status = 'pasif';
+        const cell = document.getElementById('status-cell-' + id);
+        if (cell) cell.outerHTML = renderStatusCell(id, 'pasif');
+      }
+    } else {
+      updateStatus(id, val);
+    }
+  }
+
   async function updateStatus(id, status) {
     try {
       await sbPatch('orders', `?id=eq.${id}`, { status });
       showToast('Status diperbarui', 'success');
       const o = allOrders.find(o => o.id === id);
-      if (o) o.status = status;
+      if (o) {
+        o.status = status;
+        // Re-render only this cell in place
+        const cell = document.getElementById('status-cell-' + id);
+        if (cell) cell.outerHTML = renderStatusCell(id, status);
+      }
 
       // Kirim Purchase event ke Meta CAPI saat status → closing
-      if (status === 'closing' && o && o.product_id) {
+      const _o = allOrders.find(o => o.id === id);
+      if (status === 'closing' && _o && _o.product_id) {
         try {
-          const products = await sbGet('products', `?id=eq.${o.product_id}&select=pixel_id,access_token`);
+          const products = await sbGet('products', `?id=eq.${_o.product_id}&select=pixel_id,access_token`);
           const product = products[0];
           if (product && product.pixel_id && product.access_token) {
             await fetch(`${API_URL}/send-capi`, {
@@ -268,10 +300,10 @@
                 event_name: 'Purchase',
                 event_id: 'closing_' + id,
                 user_data: {
-                  ph: o.customer_wa || '',
-                  fn: (o.customer_name || '').split(' ')[0].toLowerCase(),
-                  ln: (o.customer_name || '').split(' ').slice(1).join(' ').toLowerCase(),
-                  ct: (o.customer_city || '').toLowerCase(),
+                  ph: _o.customer_wa || '',
+                  fn: (_o.customer_name || '').split(' ')[0].toLowerCase(),
+                  ln: (_o.customer_name || '').split(' ').slice(1).join(' ').toLowerCase(),
+                  ct: (_o.customer_city || '').toLowerCase(),
                   country: 'id'
                 }
               })

@@ -20,6 +20,9 @@
       <select class="form-control" id="filterProduct" style="width:170px;" onchange="loadOrders(1)">
         <option value="">Semua Produk</option>
       </select>
+      <select class="form-control" id="filterCS" style="width:150px;" onchange="loadOrders(1)" ${getCSId ? '' : ''}>
+        <option value="">Semua CS</option>
+      </select>
       <select class="form-control" id="filterStatus" style="width:160px;" onchange="loadOrders(1)">
         <option value="">Semua Status</option>
         <option value="pending">Lead Baru</option>
@@ -153,6 +156,24 @@
       });
     } catch(e) {}
 
+    // Load CS untuk filter — hanya tampil ke admin
+    const csFilterEl = document.getElementById('filterCS');
+    if (getCSId()) {
+      // CS login: sembunyikan filter CS (mereka sudah otomatis difilter)
+      csFilterEl.closest('select') && (csFilterEl.style.display = 'none');
+      csFilterEl.style.display = 'none';
+    } else {
+      try {
+        const csList = await sbGet('cs_team', '?select=id,name&order=name.asc');
+        csList.forEach(cs => {
+          const opt = document.createElement('option');
+          opt.value = cs.id;
+          opt.textContent = cs.name;
+          csFilterEl.appendChild(opt);
+        });
+      } catch(e) {}
+    }
+
     // Auto-open order detail if navigated from notification
     const openId = new URLSearchParams(window.location.search).get('open');
     if (openId) {
@@ -170,10 +191,12 @@
     const offset = (page - 1) * PAGE_SIZE;
 
     const productId = document.getElementById('filterProduct').value;
+    const filterCSId = document.getElementById('filterCS').value;
     let filter = status    ? `status=eq.${status}&` : '';
     if (productId) filter += `product_id=eq.${productId}&`;
     if (search)    filter += `customer_name=ilike.*${encodeURIComponent(search)}*&`;
-    if (getCSId()) filter += `cs_id=eq.${getCSId()}&`;
+    if (getCSId())    filter += `cs_id=eq.${getCSId()}&`;
+    else if (filterCSId) filter += `cs_id=eq.${filterCSId}&`;
     if (_dateFrom) filter += `created_at=gte.${_dateFrom.toISOString()}&`;
     if (_dateTo)   filter += `created_at=lte.${_dateTo.toISOString()}&`;
 

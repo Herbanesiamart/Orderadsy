@@ -85,7 +85,7 @@
   </div>
 
   <!-- Belum Closing Breakdown -->
-  <div class="card card-body" style="border-top: 2px solid var(--gray-100);">
+  <div class="card card-body" style="margin-top:8px;">
     <div class="section-title mb-16">Breakdown Belum Closing</div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;" id="belumClosingGrid">
       <div class="belum-stat-card" onclick="openBelumModal('pasif','😴 Pasif')">
@@ -109,21 +109,14 @@
         <div class="belum-stat-value" id="bcKonsul">—</div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- Modal Belum Closing Detail -->
-<div class="modal-overlay hidden" id="belumModal" onclick="closeBelumModal()">
-  <div class="modal" style="max-width:520px;" onclick="event.stopPropagation()">
-    <div class="modal-header">
-      <div class="modal-title" id="belumModalTitle">—</div>
-      <button class="modal-close" onclick="closeBelumModal()">✕</button>
-    </div>
-    <div class="modal-body" style="padding:0;max-height:420px;overflow-y:auto;" id="belumModalBody">
-      <div style="padding:40px;text-align:center;color:var(--gray-400);">Loading...</div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeBelumModal()">Tutup</button>
+    <!-- Detail panel expand di bawah grid -->
+    <div id="belumDetail" style="display:none;margin-top:16px;border-top:1px solid var(--gray-100);padding-top:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-weight:600;font-size:14px;" id="belumDetailTitle">—</div>
+        <button class="btn btn-outline btn-sm" onclick="closeBelumDetail()">✕ Tutup</button>
+      </div>
+      <div id="belumDetailBody"></div>
     </div>
   </div>
 </div>
@@ -330,10 +323,27 @@
     }).join('');
   }
 
+  let _activeStatus = null;
+
   async function openBelumModal(status, label) {
-    document.getElementById('belumModalTitle').textContent = label;
-    document.getElementById('belumModalBody').innerHTML = `<div style="padding:40px;text-align:center;color:var(--gray-400);">Loading...</div>`;
-    document.getElementById('belumModal').classList.remove('hidden');
+    // Toggle: klik lagi status yang sama → tutup
+    if (_activeStatus === status) {
+      closeBelumDetail();
+      return;
+    }
+    _activeStatus = status;
+
+    // Highlight card aktif
+    document.querySelectorAll('.belum-stat-card').forEach(c => c.style.background = '');
+    event.currentTarget.style.background = 'var(--blue-light, #EFF6FF)';
+
+    const detail  = document.getElementById('belumDetail');
+    const title   = document.getElementById('belumDetailTitle');
+    const body    = document.getElementById('belumDetailBody');
+
+    title.textContent = label;
+    body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);">Loading...</div>`;
+    detail.style.display = 'block';
 
     try {
       const csFilter = getCSId() ? `&cs_id=eq.${getCSId()}` : '';
@@ -343,11 +353,11 @@
       const orders = await sbGet('orders', `?status=eq.${status}${dateF}${csFilter}&select=id,customer_name,customer_wa,created_at,products(name),cs_team(name)&order=created_at.desc`);
 
       if (!orders.length) {
-        document.getElementById('belumModalBody').innerHTML = `<div style="padding:40px;text-align:center;color:var(--gray-400);">Tidak ada order</div>`;
+        body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);">Tidak ada order dengan status ini</div>`;
         return;
       }
 
-      document.getElementById('belumModalBody').innerHTML = orders.map(o => `
+      body.innerHTML = orders.map(o => `
         <div class="belum-order-item">
           <div style="flex:1;min-width:0;">
             <div style="font-weight:600;font-size:14px;">${o.customer_name || '-'}</div>
@@ -358,15 +368,17 @@
               CS: ${o.cs_team?.name || '-'} &nbsp;·&nbsp; ${timeAgo(o.created_at)}
             </div>
           </div>
-          <a href="orders.html?open=${o.id}" class="btn btn-outline btn-sm" style="white-space:nowrap;">Lihat</a>
+          <a href="orders.html?open=${o.id}" class="btn btn-outline btn-sm" style="white-space:nowrap;flex-shrink:0;">Lihat</a>
         </div>`).join('');
     } catch(e) {
-      document.getElementById('belumModalBody').innerHTML = `<div style="padding:40px;text-align:center;color:var(--red);">Gagal load</div>`;
+      body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--red);">Gagal load</div>`;
     }
   }
 
-  function closeBelumModal() {
-    document.getElementById('belumModal').classList.add('hidden');
+  function closeBelumDetail() {
+    _activeStatus = null;
+    document.getElementById('belumDetail').style.display = 'none';
+    document.querySelectorAll('.belum-stat-card').forEach(c => c.style.background = '');
   }
 </script>
 </body>

@@ -31,7 +31,12 @@
 <div class="page-content">
   <div class="page-header">
     <div class="section-title" style="font-size:20px;">Dashboard</div>
-    <button class="date-filter-btn" id="dateFilterBtn">📅 <span class="df-label">Last 30 Days</span> ▾</button>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <select class="form-control" id="productFilter" style="width:180px;" onchange="loadDashboard(_currentFrom,_currentTo)">
+        <option value="">Semua Produk</option>
+      </select>
+      <button class="date-filter-btn" id="dateFilterBtn">📅 <span class="df-label">Last 30 Days</span> ▾</button>
+    </div>
   </div>
 
   <!-- KPI Cards -->
@@ -132,6 +137,7 @@
   let dateFilter;
   let _currentFrom = null;
   let _currentTo   = null;
+  let _currentProductId = null;
 
   // Reload saat tab aktif kembali
   document.addEventListener('visibilitychange', () => {
@@ -140,8 +146,8 @@
     }
   });
 
-  // Init DateFilter after DOM ready
-  window.addEventListener('DOMContentLoaded', () => {
+  // Init DateFilter + load products after DOM ready
+  window.addEventListener('DOMContentLoaded', async () => {
     dateFilter = new DateFilter(
       document.getElementById('dateFilterBtn'),
       ({ from, to }) => {
@@ -150,6 +156,26 @@
         loadDashboard(from, to);
       }
     );
+
+    // Load products untuk filter — CS hanya lihat produk miliknya
+    try {
+      let productsQuery = '?select=id,name&order=name.asc';
+      if (getCSId()) {
+        // Ambil product_id yang di-assign ke CS ini
+        const assigned = await sbGet('product_cs', `?cs_id=eq.${getCSId()}&select=product_id`);
+        const ids = assigned.map(a => a.product_id).join(',');
+        if (ids) productsQuery = `?id=in.(${ids})&select=id,name&order=name.asc`;
+        else return; // CS tidak punya produk
+      }
+      const products = await sbGet('products', productsQuery);
+      const sel = document.getElementById('productFilter');
+      products.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name;
+        sel.appendChild(opt);
+      });
+    } catch(e) {}
   });
 
   // Supabase Realtime — listen INSERT & UPDATE orders
@@ -175,19 +201,23 @@
   const BELUM_SET = new Set(['pasif','ongkir','harga','ooc','konsul']);
 
   async function loadDashboard(from, to) {
-    const csFilter = getCSId() ? `&cs_id=eq.${getCSId()}` : '';
+    _currentProductId = document.getElementById('productFilter')?.value || '';
+    const csFilter      = getCSId()            ? `&cs_id=eq.${getCSId()}`                  : '';
+    const productFilter = _currentProductId    ? `&product_id=eq.${_currentProductId}`     : '';
+
     try {
-      // 1 fetch untuk semua KPI + chart data (status + created_at sudah cukup)
+      // 1 fetch untuk semua KPI + chart data
       const params = [`select=status,created_at`];
       if (from && to) {
         params.push(`created_at=gte.${from.toISOString()}`);
         params.push(`created_at=lte.${to.toISOString()}`);
       }
-      if (getCSId()) params.push(`cs_id=eq.${getCSId()}`);
+      if (getCSId())         params.push(`cs_id=eq.${getCSId()}`);
+      if (_currentProductId) params.push(`product_id=eq.${_currentProductId}`);
 
       const [orders, recent] = await Promise.all([
         sbGet('orders', '?' + params.join('&')),
-        sbGet('orders', `?select=id,customer_name,status,created_at,product_id,products(name)&order=created_at.desc&limit=8${csFilter}`),
+        sbGet('orders', `?select=id,customer_name,status,created_at,product_id,products(name)&order=created_at.desc&limit=8${csFilter}${productFilter}`),
       ]);
 
       // Hitung semua KPI client-side dari 1 dataset
@@ -346,11 +376,12 @@
     detail.style.display = 'block';
 
     try {
-      const csFilter = getCSId() ? `&cs_id=eq.${getCSId()}` : '';
+      const csFilter      = getCSId()         ? `&cs_id=eq.${getCSId()}`              : '';
+      const productFilter = _currentProductId ? `&product_id=eq.${_currentProductId}` : '';
       const dateF = _currentFrom && _currentTo
         ? `&created_at=gte.${_currentFrom.toISOString()}&created_at=lte.${_currentTo.toISOString()}`
         : '';
-      const orders = await sbGet('orders', `?status=eq.${status}${dateF}${csFilter}&select=id,customer_name,customer_wa,customer_address,customer_city,created_at,products(name,followup_templates),cs_team(name)&order=created_at.desc`);
+      const orders = await sbGet('orders', `?status=eq.${status}${dateF}${csFilter}${productFilter}&select=id,customer_name,customer_wa,customer_address,customer_city,created_at,products(name,followup_templates),cs_team(name)&order=created_at.desc`);
 
       if (!orders.length) {
         body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);">Tidak ada order dengan status ini</div>`;

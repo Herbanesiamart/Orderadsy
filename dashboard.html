@@ -45,7 +45,7 @@
     </div>
     <div class="kpi-card">
       <div class="kpi-icon red">⏳</div>
-      <div class="kpi-label">Pending Orders</div>
+      <div class="kpi-label">Belum Closing</div>
       <div class="kpi-value red" id="kpiPending">—</div>
     </div>
   </div>
@@ -149,7 +149,7 @@
       const [total, closing, pending] = await Promise.all([
         sbCount('orders', baseFilter),
         sbCount('orders', `${baseFilter}&status=eq.closing`),
-        sbCount('orders', `${baseFilter}&status=eq.pending`),
+        sbCount('orders', `${baseFilter}&status=in.(pasif,ongkir,harga,ooc,konsul)`),
       ]);
 
       const rate = total > 0 ? Math.round(closing / total * 100) : 0;

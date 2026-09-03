@@ -92,7 +92,7 @@
   <!-- Belum Closing Breakdown -->
   <div class="card card-body" style="margin-top:8px;">
     <div class="section-title mb-16">Breakdown Belum Closing</div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;" id="belumClosingGrid">
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;" id="belumClosingGrid">
       <div class="belum-stat-card" onclick="openBelumModal('pasif','Pasif')">
         <div class="belum-stat-label"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="23" y1="11" x2="17" y2="11"/></svg>Pasif</div>
         <div class="belum-stat-value" id="bcPasif">—</div>
@@ -112,6 +112,10 @@
       <div class="belum-stat-card" onclick="openBelumModal('konsul','Konsul')">
         <div class="belum-stat-label"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Konsul</div>
         <div class="belum-stat-value" id="bcKonsul">—</div>
+      </div>
+      <div class="belum-stat-card" onclick="openBelumModal('no_wa','No. WA')">
+        <div class="belum-stat-label"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.42 19.42 0 0 1 4.43 9.88a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 3.34 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.32 8.91"/><line x1="1" y1="1" x2="23" y2="23"/></svg>No. WA</div>
+        <div class="belum-stat-value" id="bcNoWa">—</div>
       </div>
     </div>
 
@@ -198,7 +202,7 @@
   }
   initRealtime();
 
-  const BELUM_SET = new Set(['pasif','ongkir','harga','ooc','konsul']);
+  const BELUM_SET = new Set(['pasif','ongkir','harga','ooc','konsul','no_wa']);
 
   async function loadDashboard(from, to) {
     _currentProductId = document.getElementById('productFilter')?.value || '';
@@ -229,6 +233,7 @@
       const bcHarga     = orders.filter(o => o.status === 'harga').length;
       const bcOOC       = orders.filter(o => o.status === 'ooc').length;
       const bcKonsul    = orders.filter(o => o.status === 'konsul').length;
+      const bcNoWa      = orders.filter(o => o.status === 'no_wa').length;
       const rate        = total > 0 ? Math.round(closing / total * 100) : 0;
 
       document.getElementById('kpiOrders').textContent  = total.toLocaleString('id-ID');
@@ -240,6 +245,7 @@
       document.getElementById('bcHarga').textContent    = bcHarga.toLocaleString('id-ID');
       document.getElementById('bcOOC').textContent      = bcOOC.toLocaleString('id-ID');
       document.getElementById('bcKonsul').textContent   = bcKonsul.toLocaleString('id-ID');
+      document.getElementById('bcNoWa').textContent     = bcNoWa.toLocaleString('id-ID');
 
       buildChart(orders, from, to);
       renderRecent(recent);
@@ -339,6 +345,7 @@
       harga:   ['badge-purple', 'Harga'],
       ooc:     ['badge-gray',   'OOC'],
       konsul:  ['badge-blue',   'Konsul'],
+      no_wa:   ['badge-red',    'No. WA'],
     };
     el.innerHTML = orders.map(o => {
       const [cls, lbl] = statusMap[o.status] || ['badge-gray', o.status];

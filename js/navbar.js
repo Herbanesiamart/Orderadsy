@@ -19,6 +19,7 @@ function renderNavbar(activePage) {
         <button class="nav-link ${activePage==='others'?'active':''}" onclick="toggleNavDropdown(event)">Others ▾</button>
         <div class="nav-dropdown-menu">
           <a href="others-cs.html" class="nav-dropdown-item">👥 CS Team</a>
+          <a href="others-blocked-wa.html" class="nav-dropdown-item">🚫 Blokir WA</a>
         </div>
       </div>` : ''}
     </nav>

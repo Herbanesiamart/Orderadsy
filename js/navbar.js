@@ -224,13 +224,25 @@ function _subscribeNotifRealtime() {
     _sb.channel('notif-orders')
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'orders' },
-        (payload) => {
+        async (payload) => {
           // CS filter — skip kalau bukan ordernya
           const csId = (typeof getCSId === 'function') ? getCSId() : null;
           if (csId && payload.new?.cs_id !== csId) return;
 
+          playOrderSound();
+
+          // Fetch data lengkap order (termasuk join produk untuk nama + gambar)
+          try {
+            const rows = await sbGet('orders',
+              `?id=eq.${payload.new.id}&select=id,customer_name,product_id,products(name,image_url)&limit=1`
+            );
+            if (rows && rows[0]) showOrderToast(rows[0]);
+          } catch(e) {
+            // fallback: tampilkan dengan data minimal dari payload
+            showOrderToast({ id: payload.new.id, customer_name: payload.new.customer_name, products: { name: '-' } });
+          }
+
           fetchNotifications();
-          if (typeof playOrderSound === 'function') playOrderSound();
         }
       )
       .subscribe();
@@ -251,4 +263,85 @@ function showToast(msg, type = '') {
   t.textContent = msg;
   t.className = 'show' + (type ? ' ' + type : '');
   setTimeout(() => { t.className = ''; }, 3000);
+}
+
+/* ── Rich Order Toast ─────────────────────────────────── */
+function showOrderToast(order) {
+  // order = { id, customer_name, product_id, products: { name, image_url } }
+  let container = document.getElementById('order-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'order-toast-container';
+    document.body.appendChild(container);
+  }
+
+  const DURATION = 8000; // 8 detik
+  const productName = order.products?.name || '-';
+  const customerName = order.customer_name || 'Customer';
+  const imageUrl = order.products?.image_url;
+  const orderId = order.id;
+
+  const toast = document.createElement('div');
+  toast.className = 'order-toast';
+  toast.innerHTML = `
+    <div class="order-toast-header">
+      <span class="order-toast-badge">🛒 Order Baru</span>
+      <span class="order-toast-time">Baru saja</span>
+      <button class="order-toast-dismiss" onclick="this.closest('.order-toast')._dismiss()">✕</button>
+    </div>
+    <div class="order-toast-body">
+      ${imageUrl
+        ? `<img class="order-toast-img" src="${imageUrl}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="order-toast-img-placeholder" style="display:none">🛍️</div>`
+        : `<div class="order-toast-img-placeholder">🛍️</div>`
+      }
+      <div class="order-toast-info">
+        <div class="order-toast-name">${customerName}</div>
+        <div class="order-toast-product">${productName}</div>
+      </div>
+    </div>
+    <div class="order-toast-actions">
+      <button class="order-toast-btn primary" onclick="this.closest('.order-toast')._viewOrder()">Lihat Order</button>
+      <button class="order-toast-btn secondary" onclick="this.closest('.order-toast')._dismiss()">Tutup</button>
+    </div>
+    <div class="order-toast-progress">
+      <div class="order-toast-progress-bar" id="otpb-${orderId}" style="width:100%"></div>
+    </div>
+  `;
+
+  // Attach actions
+  toast._dismiss = () => {
+    clearTimeout(toast._timer);
+    toast.classList.add('hide');
+    setTimeout(() => toast.remove(), 350);
+  };
+  toast._viewOrder = () => {
+    toast._dismiss();
+    _notifReadIds.add(orderId);
+    _saveReadIds();
+    updateNotifBadge();
+    if (window.location.pathname.endsWith('orders.html')) {
+      if (typeof openDetail === 'function') {
+        const found = (typeof allOrders !== 'undefined') && allOrders.find(o => o.id === orderId);
+        if (found) { openDetail(orderId); return; }
+      }
+    }
+    window.location.href = `orders.html?open=${orderId}`;
+  };
+
+  container.appendChild(toast);
+
+  // Animate in
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => toast.classList.add('show'));
+  });
+
+  // Progress bar countdown
+  const bar = toast.querySelector(`#otpb-${orderId}`);
+  if (bar) {
+    bar.style.transition = `width ${DURATION}ms linear`;
+    requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = '0%'; }));
+  }
+
+  // Auto dismiss
+  toast._timer = setTimeout(() => toast._dismiss(), DURATION);
 }

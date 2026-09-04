@@ -73,10 +73,25 @@
   let abData     = [];
   let productMap = {};
 
+  let csProductIds = []; // produk yang dipegang CS, kosong = admin (lihat semua)
+
   async function init() {
+    const csId = getCSId();
+
+    // Kalau CS login → ambil produk yang dia pegang saja
+    if (csId) {
+      try {
+        const assigned = await sbGet('product_cs', `?cs_id=eq.${csId}&select=product_id`);
+        csProductIds = assigned.map(r => r.product_id);
+      } catch(e) {}
+    }
+
     // Load products untuk filter & nama
     try {
-      const prods = await sbGet('products', '?select=id,name&order=name.asc');
+      const prodsQ = csProductIds.length
+        ? `?id=in.(${csProductIds.join(',')})&select=id,name&order=name.asc`
+        : `?select=id,name&order=name.asc`;
+      const prods = await sbGet('products', prodsQ);
       const sel = document.getElementById('filterProduct');
       prods.forEach(p => {
         productMap[p.id] = p.name;
@@ -85,6 +100,7 @@
         sel.appendChild(opt);
       });
     } catch(e) {}
+
     loadAbandoned();
   }
 
@@ -92,7 +108,16 @@
     document.getElementById('abList').innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400);">Loading...</div>';
     try {
       const prodFilter = document.getElementById('filterProduct').value;
-      const q = `?order=last_activity_at.desc${prodFilter ? '&product_id=eq.' + prodFilter : ''}`;
+
+      // Tentukan filter produk: pilihan dropdown atau semua produk CS
+      let productFilter = '';
+      if (prodFilter) {
+        productFilter = `&product_id=eq.${prodFilter}`;
+      } else if (csProductIds.length) {
+        productFilter = `&product_id=in.(${csProductIds.join(',')})`;
+      }
+
+      const q = `?order=last_activity_at.desc${productFilter}`;
       abData = await sbGet('abandoned_carts', q);
       renderList();
     } catch(e) {

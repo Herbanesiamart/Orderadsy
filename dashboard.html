@@ -255,31 +255,41 @@
   }
 
   function buildChart(orders, from, to) {
+    const WIB = 7 * 60 * 60 * 1000;
     const labels = [];
     const ordersData  = [];
     const closingData = [];
 
-    if (from && to) {
-      // Iterate day by day
-      const cur = new Date(from);
-      cur.setHours(0, 0, 0, 0);
-      const end = new Date(to);
-      end.setHours(0, 0, 0, 0);
+    // Konversi created_at UTC → date string WIB (YYYY-MM-DD)
+    function wibDateStr(isoStr) {
+      const d = new Date(new Date(isoStr).getTime() + WIB);
+      return d.getUTCFullYear() + '-' +
+             String(d.getUTCMonth() + 1).padStart(2, '0') + '-' +
+             String(d.getUTCDate()).padStart(2, '0');
+    }
 
-      while (cur <= end) {
-        const label  = cur.toLocaleDateString('id-ID', { day:'numeric', month:'short' });
+    if (from && to) {
+      // from = WIB midnight of first day (as UTC ms), iterate per hari
+      let curMs = from.getTime();
+      const endMs = to.getTime();
+
+      while (curMs <= endMs) {
+        const wibDay = new Date(curMs + WIB); // shift ke WIB untuk baca tanggal
+        const dayStr = wibDay.getUTCFullYear() + '-' +
+                       String(wibDay.getUTCMonth() + 1).padStart(2, '0') + '-' +
+                       String(wibDay.getUTCDate()).padStart(2, '0');
+        const label = wibDay.toLocaleDateString('id-ID', { day:'numeric', month:'short' });
         labels.push(label);
-        const dayStr = cur.toISOString().slice(0, 10);
-        const dayOrders = orders.filter(o => o.created_at.slice(0, 10) === dayStr);
+        const dayOrders = orders.filter(o => wibDateStr(o.created_at) === dayStr);
         ordersData.push(dayOrders.length);
         closingData.push(dayOrders.filter(o => o.status === 'closing').length);
-        cur.setDate(cur.getDate() + 1);
+        curMs += 86400000; // +1 hari
       }
     } else {
-      // "Semua" — group by month from earliest order
+      // "Semua" — group by bulan WIB
       const monthMap = {};
       orders.forEach(o => {
-        const key = o.created_at.slice(0, 7); // "YYYY-MM"
+        const key = wibDateStr(o.created_at).slice(0, 7); // "YYYY-MM" WIB
         if (!monthMap[key]) monthMap[key] = { total: 0, closing: 0 };
         monthMap[key].total++;
         if (o.status === 'closing') monthMap[key].closing++;

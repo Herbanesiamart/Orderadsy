@@ -190,8 +190,6 @@
         { event: 'INSERT', schema: 'public', table: 'orders' },
         () => {
           loadDashboard(_currentFrom, _currentTo);
-          showToast('Order baru masuk!', 'success');
-          playOrderSound();
         }
       )
       .on('postgres_changes',

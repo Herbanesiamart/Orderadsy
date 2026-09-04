@@ -14,15 +14,14 @@ function renderNavbar(activePage) {
       <a href="dashboard.html" class="nav-link ${activePage==='dashboard'?'active':''}">Dashboard</a>
       ${admin ? `<a href="products.html" class="nav-link ${activePage==='products'?'active':''}">Products</a>` : ''}
       <a href="orders.html" class="nav-link ${activePage==='orders'?'active':''}">Orders</a>
-      ${admin ? `
       <div class="nav-dropdown" id="navDropdown">
         <button class="nav-link ${activePage==='others'?'active':''}" onclick="toggleNavDropdown(event)">Others ▾</button>
         <div class="nav-dropdown-menu">
-          <a href="others-cs.html" class="nav-dropdown-item">👥 CS Team</a>
+          ${admin ? `<a href="others-cs.html" class="nav-dropdown-item">👥 CS Team</a>` : ''}
           <a href="others-blocked-wa.html" class="nav-dropdown-item">🚫 Blokir WA</a>
           <a href="others-abandoned.html" class="nav-dropdown-item">🛒 Abandoned Cart</a>
         </div>
-      </div>` : ''}
+      </div>
     </nav>
     <div class="navbar-right">
       ${admin ? `<a href="products-add.html" class="btn-add-product">＋ Add Product</a>` : `<span style="font-size:13px;color:var(--gray-500);font-weight:500;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${csName || 'CS'}</span>`}

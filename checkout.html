@@ -338,12 +338,26 @@
       const waRaw = getFieldVal('wa');
       if (waRaw.replace(/\D/g, '').length >= 8) {
         clearTimeout(_abandonTimer);
-        _abandonTimer = setTimeout(saveAbandoned, 10000);
+        _abandonTimer = setTimeout(saveAbandoned, 30000);
       }
     });
+
+    // Simpan langsung saat customer keluar / pindah tab
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') trySaveOnExit();
+    });
+    window.addEventListener('pagehide', trySaveOnExit);
   }
 
-  async function saveAbandoned() {
+  function trySaveOnExit() {
+    const waRaw = getFieldVal('wa');
+    if (waRaw.replace(/\D/g, '').length >= 8) {
+      clearTimeout(_abandonTimer);
+      saveAbandoned(true); // keepalive mode
+    }
+  }
+
+  async function saveAbandoned(keepalive = false) {
     if (!_abandonSession || !checkoutPage || !product) return;
     const fieldsData = {};
     (fields || []).filter(f => f.enabled).forEach(f => {
@@ -365,6 +379,7 @@
           fields_data:      fieldsData,
           last_activity_at: new Date().toISOString(),
         }),
+        keepalive, // tetap jalan meski halaman ditutup
       });
     } catch(e) {}
   }

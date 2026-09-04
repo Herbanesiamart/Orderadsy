@@ -197,6 +197,11 @@ function initNotifications() {
   _notifReadIds = _loadReadIds();
   fetchNotifications();
 
+  // Minta izin browser notification (sekali, tidak ganggu kalau sudah granted/denied)
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
   // Fallback polling 60 detik
   if (_notifInterval) clearInterval(_notifInterval);
   _notifInterval = setInterval(fetchNotifications, 60000);
@@ -207,6 +212,35 @@ function initNotifications() {
 
   // Supabase Realtime — load CDN jika belum ada, lalu subscribe
   _initNotifRealtime();
+}
+
+function showBrowserNotif(order) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const title   = '🛒 Order Baru Masuk!';
+  const body    = `${order.customer_name || 'Customer'} memesan ${order.products?.name || '-'}`;
+  const icon    = order.products?.image_url || 'img/logo-adsy.png';
+  const orderId = order.id;
+
+  const notif = new Notification(title, { body, icon, badge: 'img/logo-adsy.png', tag: orderId });
+
+  // Klik notif → fokus tab + buka detail order
+  notif.onclick = () => {
+    window.focus();
+    _notifReadIds.add(orderId);
+    _saveReadIds();
+    updateNotifBadge();
+    if (window.location.pathname.endsWith('orders.html')) {
+      if (typeof openDetail === 'function') {
+        const found = (typeof allOrders !== 'undefined') && allOrders.find(o => o.id === orderId);
+        if (found) { openDetail(orderId); return; }
+      }
+    }
+    window.location.href = `orders.html?open=${orderId}`;
+  };
+
+  // Auto close 8 detik
+  setTimeout(() => notif.close(), 8000);
 }
 
 function _initNotifRealtime() {
@@ -239,10 +273,15 @@ function _subscribeNotifRealtime() {
             const rows = await sbGet('orders',
               `?id=eq.${payload.new.id}&select=id,customer_name,product_id,products(name,image_url)&limit=1`
             );
-            if (rows && rows[0]) showOrderToast(rows[0]);
+            if (rows && rows[0]) {
+              showOrderToast(rows[0]);
+              showBrowserNotif(rows[0]);
+            }
           } catch(e) {
             // fallback: tampilkan dengan data minimal dari payload
-            showOrderToast({ id: payload.new.id, customer_name: payload.new.customer_name, products: { name: '-' } });
+            const fallback = { id: payload.new.id, customer_name: payload.new.customer_name, products: { name: '-' } };
+            showOrderToast(fallback);
+            showBrowserNotif(fallback);
           }
 
           fetchNotifications();

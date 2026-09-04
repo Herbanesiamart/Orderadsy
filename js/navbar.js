@@ -107,8 +107,10 @@ function _saveReadIds() {
 async function fetchNotifications() {
   try {
     const csFilter = (typeof getCSId === 'function' && getCSId()) ? `&cs_id=eq.${getCSId()}` : '';
+    // 30 hari terakhir, tanpa limit count — yang sudah dibaca disembunyikan di render
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const orders = await sbGet('orders',
-      `?order=created_at.desc&limit=30&select=id,customer_name,created_at,product_id,products(name)${csFilter}`
+      `?order=created_at.desc&created_at=gte.${since}&select=id,customer_name,created_at,product_id,products(name)${csFilter}`
     );
     _notifData = orders;
     renderNotifList();

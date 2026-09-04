@@ -30,12 +30,15 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+html { overflow-x: hidden; }
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--gray-50);
   color: var(--gray-800);
   font-size: 14px;
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
 /* ── Navbar ── */
@@ -767,10 +770,11 @@ select.form-control { cursor: pointer; }
 @media (max-width: 640px) {
 
   /* Navbar */
-  .navbar { padding: 0 14px; height: 52px; }
-  .navbar-brand { font-size: 16px; margin-right: 16px; }
-  .navbar-nav { gap: 2px; }
-  .nav-link { padding: 5px 10px; font-size: 13px; }
+  .navbar { padding: 0 10px; height: 52px; gap: 0; }
+  .navbar-brand { font-size: 0; margin-right: 8px; } /* sembunyikan teks, tampilkan logo saja */
+  .navbar-brand img { width: 26px; height: 26px; }
+  .navbar-nav { gap: 0; }
+  .nav-link { padding: 5px 8px; font-size: 12px; }
   .btn-add-product { display: none; }
 
   /* Page layout */

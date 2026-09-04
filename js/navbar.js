@@ -20,6 +20,7 @@ function renderNavbar(activePage) {
         <div class="nav-dropdown-menu">
           <a href="others-cs.html" class="nav-dropdown-item">👥 CS Team</a>
           <a href="others-blocked-wa.html" class="nav-dropdown-item">🚫 Blokir WA</a>
+          <a href="others-abandoned.html" class="nav-dropdown-item">🛒 Abandoned Cart</a>
         </div>
       </div>` : ''}
     </nav>

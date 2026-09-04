@@ -372,6 +372,17 @@
     const eventId = genEventId();
     const customerName    = getFieldVal('nama');
     const customerWA      = getFieldVal('wa');
+
+    // Cek blokir WA — diam-diam batalkan jika terblokir
+    try {
+      const waCheck = normalizeWA(customerWA);
+      const blocked = await sbGet('blocked_wa', `?wa_number=eq.${encodeURIComponent(waCheck)}&select=id&limit=1`);
+      if (blocked && blocked.length > 0) {
+        // Diam-diam batal — customer tidak tahu
+        btn.disabled = false;
+        return;
+      }
+    } catch(e) { /* jangan block submit kalau cek gagal */ }
     const customerEmail   = getFieldVal('email');
     const customerAddress = getFieldVal('alamat');
     const customerCity    = getFieldVal('kota');

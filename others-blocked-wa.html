@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="img/logo-adsy.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blokir WA — OrderAdsy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .blocked-list { display:flex; flex-direction:column; gap:10px; }
+  .blocked-card {
+    background:var(--white); border:1px solid var(--gray-200);
+    border-radius:var(--radius); padding:14px 18px;
+    display:flex; align-items:center; gap:14px;
+    box-shadow:var(--shadow-sm);
+  }
+  .blocked-icon {
+    width:40px; height:40px; border-radius:50%;
+    background:#fff1f1; color:var(--red);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; flex-shrink:0;
+  }
+  .blocked-wa   { font-weight:700; font-size:15px; color:var(--gray-900); }
+  .blocked-note { font-size:12px; color:var(--gray-400); margin-top:2px; }
+  .blocked-date { font-size:11px; color:var(--gray-300); margin-top:2px; }
+  .search-wrap  { margin-bottom:16px; }
+</style>
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+<div id="toast"></div>
+
+<div class="page-content">
+  <div class="page-header">
+    <div class="page-title">🚫 Blokir WA</div>
+    <button class="btn btn-primary" onclick="openAddModal()">＋ Blokir Nomor</button>
+  </div>
+
+  <div class="search-wrap">
+    <input type="text" class="form-control" id="searchInput" placeholder="Cari nomor WA..." oninput="renderList()" style="max-width:320px;">
+  </div>
+
+  <div class="blocked-list" id="blockedList">
+    <div style="text-align:center;padding:40px;color:var(--gray-400);">Loading...</div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay hidden" id="addModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Blokir Nomor WA</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">No. WhatsApp <span class="req">*</span></label>
+        <input type="text" class="form-control" id="inputWA" placeholder="08xxxxxxxxxx atau 628xxxxxxxxxx">
+        <div class="form-hint">Nomor akan dinormalisasi otomatis ke format 628xx</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Catatan (opsional)</label>
+        <input type="text" class="form-control" id="inputNote" placeholder="Contoh: Spam 5x, nama: Budi">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+      <button class="btn btn-primary" style="background:var(--red);border-color:var(--red);" onclick="saveBlock()">🚫 Blokir</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  requireAuth();
+  renderNavbar('others');
+
+  let blockedData = [];
+
+  async function loadBlocked() {
+    try {
+      blockedData = await sbGet('blocked_wa', '?order=created_at.desc');
+      renderList();
+    } catch(e) {
+      document.getElementById('blockedList').innerHTML = `<div style="color:var(--red);">Gagal load: ${e.message}</div>`;
+    }
+  }
+
+  function renderList() {
+    const el = document.getElementById('blockedList');
+    const q  = (document.getElementById('searchInput').value || '').toLowerCase();
+    const filtered = q ? blockedData.filter(b => b.wa_number.includes(q) || (b.note||'').toLowerCase().includes(q)) : blockedData;
+
+    if (!filtered.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🚫</div><div class="empty-state-text">${q ? 'Nomor tidak ditemukan' : 'Belum ada nomor yang diblokir'}</div></div>`;
+      return;
+    }
+
+    el.innerHTML = filtered.map(b => `
+      <div class="blocked-card">
+        <div class="blocked-icon">🚫</div>
+        <div style="flex:1;min-width:0;">
+          <div class="blocked-wa">${b.wa_number}</div>
+          ${b.note ? `<div class="blocked-note">📝 ${b.note}</div>` : ''}
+          <div class="blocked-date">Diblokir: ${new Date(b.created_at).toLocaleString('id-ID',{timeZone:'Asia/Jakarta',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+        <button class="btn btn-sm" style="background:var(--red-light);color:var(--red);border:none;flex-shrink:0;" onclick="unblock('${b.id}','${b.wa_number}')">Hapus Blokir</button>
+      </div>`).join('');
+  }
+
+  function openAddModal() {
+    document.getElementById('inputWA').value = '';
+    document.getElementById('inputNote').value = '';
+    document.getElementById('addModal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('inputWA').focus(), 100);
+  }
+
+  function closeModal() { document.getElementById('addModal').classList.add('hidden'); }
+
+  async function saveBlock() {
+    const wa   = document.getElementById('inputWA').value.trim();
+    const note = document.getElementById('inputNote').value.trim();
+    if (!wa) { showToast('Nomor WA wajib diisi', 'error'); return; }
+
+    const waFormatted = normalizeWA(wa);
+
+    // Cek duplikat
+    if (blockedData.some(b => b.wa_number === waFormatted)) {
+      showToast('Nomor ini sudah diblokir', 'error'); return;
+    }
+
+    try {
+      await sbPost('blocked_wa', { wa_number: waFormatted, note: note || null });
+      showToast('Nomor berhasil diblokir', 'success');
+      closeModal();
+      loadBlocked();
+    } catch(e) {
+      showToast('Gagal blokir: ' + e.message, 'error');
+    }
+  }
+
+  async function unblock(id, wa) {
+    if (!confirm(`Hapus blokir untuk nomor ${wa}?`)) return;
+    try {
+      await sbDelete('blocked_wa', `?id=eq.${id}`);
+      showToast('Blokir dihapus', 'success');
+      loadBlocked();
+    } catch(e) {
+      showToast('Gagal hapus: ' + e.message, 'error');
+    }
+  }
+
+  loadBlocked();
+</script>
+</body>
+</html>

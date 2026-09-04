@@ -452,7 +452,7 @@
         </div>
         <div>
           <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">Waktu Order</div>
-          <div style="font-size:14px;">${new Date(o.created_at).toLocaleString('id-ID')}</div>
+          <div style="font-size:14px;">${new Date(o.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</div>
         </div>
       </div>`;
     document.getElementById('detailModal').classList.remove('hidden');

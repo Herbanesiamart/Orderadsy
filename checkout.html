@@ -318,6 +318,65 @@
     const btnEl = document.getElementById('btnSubmit');
     btnEl.innerHTML = `<span>${btnTextVal}</span>${iconHtml ? `<span style="display:inline-flex;align-items:center;">${iconHtml}</span>` : ''}`;
     btnEl.style.background = checkoutPage.button_color || '#F59E0B';
+
+    // Init abandoned cart tracking setelah fields dirender
+    initAbandonedTracking();
+  }
+
+  /* ── Abandoned Cart Tracking ── */
+  let _abandonSession = null;
+  let _abandonTimer   = null;
+
+  function initAbandonedTracking() {
+    const storageKey = `oa_abandon_${pageIdParam || 'x'}`;
+    _abandonSession  = sessionStorage.getItem(storageKey) || (Date.now() + '-' + Math.random().toString(36).slice(2));
+    sessionStorage.setItem(storageKey, _abandonSession);
+
+    // Listen input di semua field, trigger simpan kalau WA sudah diisi
+    const formEl = document.getElementById('formFields');
+    if (formEl) formEl.addEventListener('input', () => {
+      const waRaw = getFieldVal('wa');
+      if (waRaw.replace(/\D/g, '').length >= 8) {
+        clearTimeout(_abandonTimer);
+        _abandonTimer = setTimeout(saveAbandoned, 10000);
+      }
+    });
+  }
+
+  async function saveAbandoned() {
+    if (!_abandonSession || !checkoutPage || !product) return;
+    const fieldsData = {};
+    (fields || []).filter(f => f.enabled).forEach(f => {
+      const v = getFieldVal(f.key);
+      if (v) fieldsData[f.key] = v;
+    });
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/abandoned_carts`, {
+        method: 'POST',
+        headers: { ...sbH, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify({
+          session_id:       _abandonSession,
+          checkout_page_id: checkoutPage.id,
+          product_id:       product.id,
+          customer_name:    getFieldVal('nama') || null,
+          customer_wa:      normalizeWA(getFieldVal('wa')) || null,
+          customer_address: getFieldVal('alamat') || null,
+          customer_city:    getFieldVal('kota') || null,
+          fields_data:      fieldsData,
+          last_activity_at: new Date().toISOString(),
+        }),
+      });
+    } catch(e) {}
+  }
+
+  async function deleteAbandoned() {
+    if (!_abandonSession) return;
+    try {
+      clearTimeout(_abandonTimer);
+      await fetch(`${SUPABASE_URL}/rest/v1/abandoned_carts?session_id=eq.${_abandonSession}`, {
+        method: 'DELETE', headers: sbH,
+      });
+    } catch(e) {}
   }
 
   function getFieldVal(key) {
@@ -427,6 +486,9 @@
 
       const orderData = await orderRes.json();
       const orderId = orderData[0]?.id;
+
+      // Hapus dari abandoned cart — order berhasil masuk
+      deleteAbandoned();
 
       // 2-5. Semua background tasks — fire and forget, tidak perlu ditunggu
       const capiEvent = checkoutPage.pixel_event || 'Lead';

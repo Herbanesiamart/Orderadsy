@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="img/logo-adsy.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Abandoned Cart — OrderAdsy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .ab-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .ab-icon {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: #fff7ed; color: #f97316;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .ab-info { flex: 1; min-width: 0; }
+  .ab-name { font-weight: 700; font-size: 15px; color: var(--gray-900); }
+  .ab-wa   { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
+  .ab-meta { font-size: 12px; color: var(--gray-400); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .ab-contacted {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #f0fdf4; color: #16a34a;
+    border: 1px solid #bbf7d0;
+    border-radius: 20px; font-size: 11px; font-weight: 600;
+    padding: 3px 10px; margin-top: 6px;
+  }
+  .ab-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .ab-list { display: flex; flex-direction: column; gap: 10px; }
+  .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+  .filter-bar select, .filter-bar input { height: 36px; font-size: 13px; }
+  .count-info { font-size: 13px; color: var(--gray-400); margin-left: auto; }
+</style>
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+<div id="toast"></div>
+
+<div class="page-content">
+  <div class="page-header">
+    <div class="page-title">🛒 Abandoned Cart</div>
+  </div>
+
+  <div class="filter-bar">
+    <select class="form-control" id="filterProduct" onchange="loadAbandoned()" style="width:auto;min-width:160px;">
+      <option value="">Semua Produk</option>
+    </select>
+    <input type="text" class="form-control" id="filterSearch" placeholder="Cari nama / WA..." oninput="renderList()" style="width:200px;">
+    <span class="count-info" id="countInfo"></span>
+  </div>
+
+  <div class="ab-list" id="abList">
+    <div style="text-align:center;padding:40px;color:var(--gray-400);">Loading...</div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/navbar.js"></script>
+<script>
+  requireAuth();
+  renderNavbar('others');
+
+  let abData     = [];
+  let productMap = {};
+
+  async function init() {
+    // Load products untuk filter & nama
+    try {
+      const prods = await sbGet('products', '?select=id,name&order=name.asc');
+      const sel = document.getElementById('filterProduct');
+      prods.forEach(p => {
+        productMap[p.id] = p.name;
+        const opt = document.createElement('option');
+        opt.value = p.id; opt.textContent = p.name;
+        sel.appendChild(opt);
+      });
+    } catch(e) {}
+    loadAbandoned();
+  }
+
+  async function loadAbandoned() {
+    document.getElementById('abList').innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400);">Loading...</div>';
+    try {
+      const prodFilter = document.getElementById('filterProduct').value;
+      const q = `?order=last_activity_at.desc${prodFilter ? '&product_id=eq.' + prodFilter : ''}`;
+      abData = await sbGet('abandoned_carts', q);
+      renderList();
+    } catch(e) {
+      document.getElementById('abList').innerHTML = `<div style="color:var(--red);padding:20px;">Gagal load: ${e.message}</div>`;
+    }
+  }
+
+  function renderList() {
+    const el  = document.getElementById('abList');
+    const q   = (document.getElementById('filterSearch').value || '').toLowerCase();
+    const filtered = q
+      ? abData.filter(a => (a.customer_name||'').toLowerCase().includes(q) || (a.customer_wa||'').includes(q))
+      : abData;
+
+    document.getElementById('countInfo').textContent = `${filtered.length} data`;
+
+    if (!filtered.length) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🛒</div><div class="empty-state-text">${q ? 'Tidak ditemukan' : 'Belum ada abandoned cart'}</div></div>`;
+      return;
+    }
+
+    el.innerHTML = filtered.map(a => {
+      const prodName   = productMap[a.product_id] || '-';
+      const name       = a.customer_name || '<span style="color:var(--gray-300);">-</span>';
+      const wa         = a.customer_wa   || '-';
+      const address    = [a.customer_address, a.customer_city].filter(Boolean).join(', ') || null;
+      const started    = new Date(a.started_at).toLocaleString('id-ID', { timeZone:'Asia/Jakarta', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+      const lastActive = new Date(a.last_activity_at).toLocaleString('id-ID', { timeZone:'Asia/Jakarta', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+
+      const contactedBadge = a.contacted_by
+        ? `<div class="ab-contacted">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Sudah dihubungi ${a.contacted_by} · ${new Date(a.contacted_at).toLocaleString('id-ID',{timeZone:'Asia/Jakarta',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+           </div>`
+        : '';
+
+      const waBtn = a.customer_wa
+        ? `<button class="btn btn-sm btn-primary" onclick="contactWA('${a.id}','${a.customer_wa}','${(a.customer_name||'').replace(/'/g,"\\'")}','${prodName.replace(/'/g,"\\'")}')">
+             💬 Hubungi WA
+           </button>`
+        : '';
+
+      return `
+        <div class="ab-card" id="abcard-${a.id}">
+          <div class="ab-icon">🛒</div>
+          <div class="ab-info">
+            <div class="ab-name">${name}</div>
+            <div class="ab-wa">📱 ${wa}</div>
+            ${address ? `<div class="ab-wa">📍 ${address}</div>` : ''}
+            <div class="ab-meta">
+              <span>🛍️ ${prodName}</span>
+              <span>⏰ Mulai: ${started}</span>
+              <span>🕐 Terakhir aktif: ${lastActive}</span>
+            </div>
+            ${contactedBadge}
+          </div>
+          <div class="ab-actions">
+            ${waBtn}
+            <button class="btn btn-sm" style="background:var(--red-light);color:var(--red);border:none;" onclick="deleteAbandoned('${a.id}')">Hapus</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  async function contactWA(id, wa, name, prodName) {
+    const csName = getCSName() || (isAdmin() ? 'Admin' : 'CS');
+    const waClean = wa.replace(/\D/g, '');
+    const msg = encodeURIComponent(`Halo${name ? ' ' + name : ''}, kami dari tim Adsy. Kami melihat kamu tertarik dengan produk ${prodName} tapi belum sempat selesai memesan. Boleh kami bantu? 😊`);
+    window.open(`https://wa.me/${waClean}?text=${msg}`, '_blank');
+
+    // Tandai sudah dihubungi
+    try {
+      await sbPatch('abandoned_carts', `?id=eq.${id}`, {
+        contacted_by: csName,
+        contacted_at: new Date().toISOString(),
+      });
+      // Update UI lokal tanpa reload
+      const idx = abData.findIndex(a => a.id === id);
+      if (idx !== -1) {
+        abData[idx].contacted_by = csName;
+        abData[idx].contacted_at = new Date().toISOString();
+        renderList();
+      }
+    } catch(e) { showToast('Gagal update status', 'error'); }
+  }
+
+  async function deleteAbandoned(id) {
+    if (!confirm('Hapus data abandoned cart ini?')) return;
+    try {
+      await sbDelete('abandoned_carts', `?id=eq.${id}`);
+      abData = abData.filter(a => a.id !== id);
+      renderList();
+      showToast('Data dihapus', 'success');
+    } catch(e) { showToast('Gagal hapus: ' + e.message, 'error'); }
+  }
+
+  init();
+</script>
+</body>
+</html>

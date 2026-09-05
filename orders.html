@@ -34,6 +34,7 @@
           <option value="ooc">· OOC</option>
           <option value="konsul">· Konsul</option>
           <option value="no_wa">· No. WA</option>
+          <option value="blokir">· Blokir</option>
         </optgroup>
       </select>
       <input type="text" class="form-control" id="searchInput" placeholder="Cari nama customer..." style="width:220px;" oninput="filterOrders()">
@@ -265,6 +266,7 @@
       ooc:     ['badge-gray',   'OOC'],
       konsul:  ['badge-blue',   'Konsul'],
       no_wa:   ['badge-red',    'No. WA'],
+      blokir:  ['badge-red',    'Blokir'],
     };
     tbody.innerHTML = orders.map(o => `
       <tr style="cursor:pointer;" onclick="openDetail('${o.id}')">
@@ -291,7 +293,7 @@
       </tr>`).join('');
   }
 
-  const BELUM_CLOSING = new Set(['pasif','ongkir','harga','ooc','konsul','no_wa']);
+  const BELUM_CLOSING = new Set(['pasif','ongkir','harga','ooc','konsul','no_wa','blokir']);
 
   function renderFUBadge(o) {
     if (!o.fu_count) {
@@ -328,6 +330,7 @@
         <option value="ooc"    ${status==='ooc'   ?'selected':''}>OOC</option>
         <option value="konsul" ${status==='konsul'?'selected':''}>Konsul</option>
         <option value="no_wa"  ${status==='no_wa' ?'selected':''}>No. WA</option>
+        <option value="blokir" ${status==='blokir'?'selected':''}>Blokir</option>
       </select>
     </div>`;
   }

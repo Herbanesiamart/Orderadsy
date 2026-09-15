@@ -240,7 +240,7 @@
 
     try {
       // Step 1: load product dulu (butuh product.id untuk query berikutnya)
-      const products = await sbGet('products', `?slug=eq.${slug}&status=eq.active&limit=1`);
+      const products = await sbGet('products', `?slug=eq.${slug}&status=eq.active&limit=1&select=id,name,slug,price,pixel_id,access_token,followup_welcome,followup_redirect,followup_templates,status`);
       if (!products.length) { showError(); return; }
       product = products[0];
 

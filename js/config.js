@@ -20,6 +20,20 @@ async function sbGet(table, query = '') {
   return r.json();
 }
 
+async function sbGetAll(table, query = '') {
+  let all = [], from = 0;
+  while (true) {
+    const sep = query.includes('?') ? '&' : '?';
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}${sep}offset=${from}&limit=1000`, { headers: getSupabaseHeaders() });
+    if (!r.ok) throw new Error(await r.text());
+    const batch = await r.json();
+    all = all.concat(batch);
+    if (batch.length < 1000) break;
+    from += 1000;
+  }
+  return all;
+}
+
 async function sbPost(table, body) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
     method: 'POST', headers: getSupabaseHeaders(), body: JSON.stringify(body),

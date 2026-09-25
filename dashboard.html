@@ -213,7 +213,7 @@
 
     try {
       // 1 fetch untuk semua KPI + chart data
-      const params = [`select=status,created_at`];
+      const params = [`select=status,created_at`, `limit=10000`];
       if (from && to) {
         params.push(`created_at=gte.${from.toISOString()}`);
         params.push(`created_at=lte.${to.toISOString()}`);

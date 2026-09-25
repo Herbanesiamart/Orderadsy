@@ -213,7 +213,7 @@
 
     try {
       // 1 fetch untuk semua KPI + chart data
-      const params = [`select=status,created_at`, `limit=10000`];
+      const params = [`select=status,created_at`];
       if (from && to) {
         params.push(`created_at=gte.${from.toISOString()}`);
         params.push(`created_at=lte.${to.toISOString()}`);
@@ -222,7 +222,7 @@
       if (_currentProductId) params.push(`product_id=eq.${_currentProductId}`);
 
       const [orders, recent] = await Promise.all([
-        sbGet('orders', '?' + params.join('&')),
+        sbGetAll('orders', '?' + params.join('&')),
         sbGet('orders', `?select=id,customer_name,status,created_at,product_id,products(name)&order=created_at.desc&limit=8${csFilter}${productFilter}${from && to ? `&created_at=gte.${from.toISOString()}&created_at=lte.${to.toISOString()}` : ''}`),
       ]);
 

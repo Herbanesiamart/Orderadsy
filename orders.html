@@ -202,7 +202,7 @@
     if (_dateTo)     f.push(`created_at=lte.${_dateTo.toISOString()}`);
 
     const filterStr = f.length ? f.join('&') + '&' : '';
-    const dataQ  = `?${filterStr}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,products(name,followup_welcome),cs_team(name,wa_number),checkout_pages(fields_config)`;
+    const dataQ  = `?${filterStr}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,is_duplicate,products(name,followup_welcome),cs_team(name,wa_number),checkout_pages(fields_config)`;
 
     try {
       document.getElementById('ordersTable').innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--gray-400);">Loading...</td></tr>`;
@@ -273,7 +273,7 @@
     tbody.innerHTML = orders.map(o => `
       <tr style="cursor:pointer;" onclick="openDetail('${o.id}')">
         <td>
-          <div style="font-weight:600;font-size:14px;">${o.customer_name || '-'}</div>
+          <div style="font-weight:600;font-size:14px;">${o.customer_name || '-'}${o.is_duplicate ? ' <span class="badge badge-red" style="font-size:10px;vertical-align:middle;">DUPLIKAT</span>' : ''}</div>
           <div style="font-size:12px;color:var(--gray-400);">💬 ${o.customer_wa || ''}</div>
           <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">${o.products?.name || ''}</div>
         </td>

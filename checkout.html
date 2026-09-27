@@ -493,8 +493,20 @@
     const customerNote    = getFieldVal('catatan');
     const customerKeluhan = getFieldVal('keluhan');
 
-    // Pick CS (round-robin)
-    const cs = assignedCS.length > 0 ? assignedCS[rotatorIndex % assignedCS.length] : null;
+    // Cek duplikat 24 jam — sticky CS jika WA+produk sudah pernah order
+    let isDuplicate = false;
+    let cs = assignedCS.length > 0 ? assignedCS[rotatorIndex % assignedCS.length] : null;
+    try {
+      const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const prevOrders = await sbGet('orders', `?customer_wa=eq.${encodeURIComponent(normalizeWA(customerWA))}&product_id=eq.${product.id}&created_at=gte.${since24h}&select=cs_id&order=created_at.desc&limit=1`);
+      if (prevOrders && prevOrders.length > 0 && prevOrders[0].cs_id) {
+        isDuplicate = true;
+        // Cek apakah CS lama masih aktif di produk ini
+        const prevCS = assignedCS.find(c => c.id === prevOrders[0].cs_id);
+        if (prevCS) cs = prevCS; // sticky ke CS lama
+        // kalau CS lama tidak ada di assignedCS → fallback rotasi normal
+      }
+    } catch(e) { /* gagal cek duplikat → lanjut rotasi normal */ }
 
     try {
       // Hitung midnight WIB untuk count query
@@ -526,6 +538,7 @@
           customer_note:    customerNote || null,
           customer_keluhan: customerKeluhan || null,
           status:           'pending',
+          is_duplicate:     isDuplicate,
         }),
       });
 

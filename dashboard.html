@@ -139,6 +139,21 @@
   </div>
 </div>
 
+<!-- Order Detail Modal -->
+<div class="modal-overlay hidden" id="dashDetailModal" onclick="if(event.target===this)closeDashDetail()">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title">Detail Order</div>
+      <button class="modal-close" onclick="closeDashDetail()">✕</button>
+    </div>
+    <div class="modal-body" id="dashDetailBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeDashDetail()">Tutup</button>
+      <button class="btn btn-accent" id="dashBtnWA" onclick="openDashWA()">💬 Buka WA CS</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/config.js"></script>
 <script src="js/navbar.js"></script>
 <script src="js/date-filter.js"></script>
@@ -370,14 +385,96 @@
     el.innerHTML = orders.map(o => {
       const [cls, lbl] = statusMap[o.status] || ['badge-gray', o.status];
       return `
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100);">
-          <div style="flex:1;min-width:0;">
+        <div onclick="openRecentDetail('${o.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100);cursor:pointer;border-radius:6px;transition:background .12s;" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background=''">
+          <div style="flex:1;min-width:0;padding:0 4px;">
             <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${o.customer_name || '-'}</div>
             <div style="font-size:11px;color:var(--gray-400);">${o.products?.name || ''} · ${timeAgo(o.created_at)}</div>
           </div>
           <span class="badge ${cls}">${lbl}</span>
         </div>`;
     }).join('');
+  }
+
+  let _dashCurrentOrder = null;
+
+  async function openRecentDetail(id) {
+    const body = document.getElementById('dashDetailBody');
+    body.innerHTML = `<div style="text-align:center;padding:32px;color:var(--gray-400);">Loading...</div>`;
+    document.getElementById('dashDetailModal').classList.remove('hidden');
+
+    try {
+      const res = await sbGet('orders', `?id=eq.${id}&select=*,products(name),cs_team(name,wa_number)&limit=1`);
+      if (!res || !res[0]) { body.innerHTML = `<div style="padding:24px;color:var(--red);">Order tidak ditemukan</div>`; return; }
+      const o = res[0];
+      _dashCurrentOrder = o;
+
+      const fields = [
+        { label: 'Customer',         val: o.customer_name },
+        { label: 'No. WhatsApp',     val: o.customer_wa },
+        { label: 'Email',            val: o.customer_email },
+        { label: 'Alamat',           val: o.customer_address },
+        { label: 'Kota / Kecamatan', val: o.customer_city },
+        { label: 'Keluhan',          val: o.customer_keluhan },
+        { label: 'Catatan',          val: o.customer_note },
+      ].filter(f => f.val);
+
+      const statusMap = { pending:'Lead Baru', closing:'Closing', pasif:'Pasif', ongkir:'Ongkir', harga:'Harga', ooc:'OOC', konsul:'Konsul', no_wa:'No. WA', blokir:'Blokir' };
+      const badgeMap  = { pending:'badge-orange', closing:'badge-green', pasif:'badge-gray', ongkir:'badge-purple', harga:'badge-purple', ooc:'badge-gray', konsul:'badge-blue', no_wa:'badge-red', blokir:'badge-red' };
+
+      body.innerHTML = `
+        <div style="display:grid;gap:14px;">
+          ${fields.map(f => `
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">${f.label}</div>
+              <div style="font-size:14px;">${f.val}</div>
+            </div>`).join('')}
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1;">
+              <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">Produk</div>
+              <div style="font-size:14px;">${o.products?.name || '-'}</div>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">CS Handle</div>
+              <div style="font-size:14px;">${o.cs_team?.name || '-'}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;">
+            <div style="flex:1;">
+              <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">Status</div>
+              <span class="badge ${badgeMap[o.status] || 'badge-gray'}">${statusMap[o.status] || o.status}</span>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">Waktu Order</div>
+              <div style="font-size:13px;">${new Date(o.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</div>
+            </div>
+          </div>
+          ${o.closing_qty ? `
+          <div style="background:var(--green-light,#F0FDF4);border:1px solid #86EFAC;border-radius:var(--radius-sm);padding:10px 14px;display:flex;gap:20px;">
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">Closing Qty</div>
+              <div style="font-size:15px;font-weight:700;color:var(--green);">${o.closing_qty} pcs</div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">Nilai Closing</div>
+              <div style="font-size:15px;font-weight:700;color:var(--green);">Rp ${Number(o.closing_value || 0).toLocaleString('id-ID')}</div>
+            </div>
+          </div>` : ''}
+        </div>`;
+    } catch(e) {
+      body.innerHTML = `<div style="padding:24px;color:var(--red);">Gagal load: ${e.message}</div>`;
+    }
+  }
+
+  function closeDashDetail() {
+    document.getElementById('dashDetailModal').classList.add('hidden');
+    _dashCurrentOrder = null;
+  }
+
+  function openDashWA() {
+    if (!_dashCurrentOrder) return;
+    const wa = (_dashCurrentOrder.customer_wa || '').replace(/\D/g, '');
+    if (!wa || wa === '62') { showToast('No. WhatsApp tidak tersedia', 'error'); return; }
+    window.open(`https://wa.me/${wa}`, '_blank');
   }
 
   let _activeStatus = null;

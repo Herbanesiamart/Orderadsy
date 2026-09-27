@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/png" href="img/logo-adsy.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS Performance — OrderAdsy</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .perf-section { margin-bottom: 24px; }
+  .perf-product-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 20px;
+    background: var(--primary-light, #FFF8E1);
+    border-left: 4px solid var(--primary);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    font-weight: 700; font-size: 15px; color: var(--gray-800);
+  }
+  .perf-table { width: 100%; border-collapse: collapse; }
+  .perf-table th {
+    padding: 10px 16px; font-size: 12px; font-weight: 600;
+    color: var(--gray-400); text-transform: uppercase;
+    border-bottom: 1px solid var(--gray-200); text-align: left;
+    background: var(--gray-50);
+  }
+  .perf-table td {
+    padding: 12px 16px; font-size: 13px;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+  }
+  .perf-table tr:last-child td { border-bottom: none; }
+  .perf-table tr:hover td { background: var(--gray-50); }
+
+  .cr-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .cr-bar-bg { flex: 1; height: 6px; background: var(--gray-200); border-radius: 99px; min-width: 60px; }
+  .cr-bar-fill { height: 6px; border-radius: 99px; background: var(--primary); }
+  .cr-label { font-weight: 700; font-size: 13px; min-width: 36px; }
+
+  .belum-btn {
+    background: none; border: 1px solid var(--gray-300);
+    padding: 4px 10px; border-radius: 6px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    color: var(--gray-700); transition: all .15s;
+  }
+  .belum-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+  /* Modal */
+  .perf-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 1000; display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  .perf-modal-overlay.open { display: flex; }
+  .perf-modal {
+    background: var(--white); border-radius: var(--radius);
+    width: 100%; max-width: 580px; max-height: 85vh;
+    overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  }
+  .perf-modal-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--gray-200);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .perf-modal-title { font-weight: 700; font-size: 15px; color: var(--gray-800); }
+  .perf-modal-sub { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+  .perf-modal-body { overflow-y: auto; padding: 20px; flex: 1; }
+
+  .sub-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
+  @media (max-width: 500px) { .sub-cards { grid-template-columns: repeat(2,1fr); } }
+
+  .sub-card {
+    background: var(--gray-50); border: 2px solid transparent;
+    border-radius: 10px; padding: 12px 10px; text-align: center;
+    cursor: pointer; transition: all .15s;
+  }
+  .sub-card:hover { border-color: var(--primary); background: var(--primary-light); }
+  .sub-card.active { border-color: var(--primary); background: var(--primary-light); }
+  .sub-card-label { font-size: 11px; color: var(--gray-400); font-weight: 500; margin-bottom: 4px; }
+  .sub-card-value { font-size: 20px; font-weight: 700; color: var(--gray-700); }
+
+  .sub-list { border-top: 1px solid var(--gray-100); margin-top: 4px; }
+  .sub-list-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 4px; border-bottom: 1px solid var(--gray-100);
+    font-size: 13px;
+  }
+  .sub-list-item:last-child { border-bottom: none; }
+  .sub-list-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--primary-light); color: var(--primary);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px; flex-shrink: 0;
+  }
+
+  .empty-perf { text-align: center; padding: 40px 20px; color: var(--gray-400); font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="navbar" class="navbar"></div>
+<div id="toast"></div>
+
+<div class="page-content">
+  <div class="page-header">
+    <div class="section-title" style="font-size:20px;">CS Performance</div>
+    <button class="date-filter-btn" id="dateFilterBtn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span class="df-label">Last 30 Days</span> ▾
+    </button>
+  </div>
+
+  <div id="perfContent">
+    <div class="empty-perf">Loading...</div>
+  </div>
+</div>
+
+<!-- Modal Belum Closing -->
+<div class="perf-modal-overlay" id="belumModal" onclick="if(event.target===this)closeBelumModal()">
+  <div class="perf-modal">
+    <div class="perf-modal-header">
+      <div>
+        <div class="perf-modal-title" id="modalTitle">Belum Closing</div>
+        <div class="perf-modal-sub" id="modalSub"></div>
+      </div>
+      <button class="modal-close" onclick="closeBelumModal()">✕</button>
+    </div>
+    <div class="perf-modal-body">
+      <div class="sub-cards" id="subCards"></div>
+      <div class="sub-list" id="subList" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/navbar.js"></script>
+<script src="js/date-filter.js"></script>
+<script>
+  requireAuth(true); // admin only
+  renderNavbar('cs-performance');
+
+  const BELUM_SET = new Set(['pasif','ongkir','harga','ooc','konsul','no_wa','blokir']);
+  const SUB_LIST = [
+    { key: 'pasif',  label: '😴 Pasif' },
+    { key: 'ongkir', label: '🚚 Ongkir' },
+    { key: 'harga',  label: '💰 Harga' },
+    { key: 'ooc',    label: '📦 OOC' },
+    { key: 'konsul', label: '💬 Konsul' },
+    { key: 'no_wa',  label: '📵 No. WA' },
+    { key: 'blokir', label: '🚫 Blokir' },
+  ];
+
+  let _from = null, _to = null;
+  let _modalOrders = [];
+  let _activeSubKey = null;
+
+  // ── Date Filter ──
+  const dateFilter = new DateFilter(
+    document.getElementById('dateFilterBtn'),
+    ({ from, to }) => { _from = from; _to = to; loadPerformance(); }
+  );
+
+  async function loadPerformance() {
+    document.getElementById('perfContent').innerHTML = '<div class="empty-perf">Loading...</div>';
+    try {
+      const dateQ = _from && _to
+        ? `&created_at=gte.${_from.toISOString()}&created_at=lte.${_to.toISOString()}`
+        : '';
+
+      const [orders, products, csTeam] = await Promise.all([
+        sbGetAll('orders', `?select=id,product_id,cs_id,status,customer_name,customer_wa${dateQ}`),
+        sbGet('products', '?select=id,name&status=eq.active&order=name.asc'),
+        sbGet('cs_team', '?select=id,name&order=name.asc'),
+      ]);
+
+      if (!orders.length) {
+        document.getElementById('perfContent').innerHTML = '<div class="empty-perf">Tidak ada data di periode ini.</div>';
+        return;
+      }
+
+      const csMap      = Object.fromEntries(csTeam.map(c => [c.id, c.name]));
+      const productMap = Object.fromEntries(products.map(p => [p.id, p.name]));
+
+      // Group orders by product → cs
+      const byProduct = {};
+      orders.forEach(o => {
+        if (!o.product_id) return;
+        if (!byProduct[o.product_id]) byProduct[o.product_id] = {};
+        const csKey = o.cs_id || '__none__';
+        if (!byProduct[o.product_id][csKey]) byProduct[o.product_id][csKey] = [];
+        byProduct[o.product_id][csKey].push(o);
+      });
+
+      // Hanya tampilkan produk yang ada di products aktif
+      const productIds = products.map(p => p.id).filter(id => byProduct[id]);
+
+      if (!productIds.length) {
+        document.getElementById('perfContent').innerHTML = '<div class="empty-perf">Tidak ada data di periode ini.</div>';
+        return;
+      }
+
+      let html = '';
+      productIds.forEach(pid => {
+        const pName   = productMap[pid] || 'Produk';
+        const csData  = byProduct[pid];
+        const csIds   = Object.keys(csData).sort((a, b) => {
+          const nameA = csMap[a] || 'Tanpa CS';
+          const nameB = csMap[b] || 'Tanpa CS';
+          return nameA.localeCompare(nameB);
+        });
+
+        // Total baris ringkasan produk
+        const allPOrders = csIds.flatMap(cid => csData[cid]);
+        const totalLead    = allPOrders.length;
+        const totalClosing = allPOrders.filter(o => o.status === 'closing').length;
+        const totalCR      = totalLead > 0 ? Math.round(totalClosing / totalLead * 100) : 0;
+        const totalBelum   = allPOrders.filter(o => BELUM_SET.has(o.status)).length;
+
+        let rows = '';
+        csIds.forEach(cid => {
+          const csOrders  = csData[cid];
+          const csName    = csMap[cid] || 'Tanpa CS';
+          const lead      = csOrders.length;
+          const closing   = csOrders.filter(o => o.status === 'closing').length;
+          const cr        = lead > 0 ? Math.round(closing / lead * 100) : 0;
+          const belum     = csOrders.filter(o => BELUM_SET.has(o.status)).length;
+          const crColor   = cr >= 60 ? 'var(--green)' : cr >= 35 ? 'var(--primary)' : 'var(--red)';
+          const encodedOrders = encodeURIComponent(JSON.stringify(csOrders));
+
+          rows += `
+            <tr>
+              <td><span style="font-weight:600;">${csName}</span></td>
+              <td>${lead.toLocaleString('id-ID')}</td>
+              <td>${closing.toLocaleString('id-ID')}</td>
+              <td>
+                <div class="cr-bar-wrap">
+                  <div class="cr-bar-bg"><div class="cr-bar-fill" style="width:${cr}%;background:${crColor};"></div></div>
+                  <span class="cr-label" style="color:${crColor};">${cr}%</span>
+                </div>
+              </td>
+              <td>
+                ${belum > 0
+                  ? `<button class="belum-btn" onclick='openBelumModal(${JSON.stringify(csOrders)}, ${JSON.stringify(csName)}, ${JSON.stringify(pName)})'>${belum.toLocaleString('id-ID')} →</button>`
+                  : `<span style="color:var(--gray-300);font-size:12px;">—</span>`
+                }
+              </td>
+            </tr>`;
+        });
+
+        // Baris total produk
+        const totalCrColor = totalCR >= 60 ? 'var(--green)' : totalCR >= 35 ? 'var(--primary)' : 'var(--red)';
+        rows += `
+          <tr style="background:var(--gray-50);font-weight:700;">
+            <td style="color:var(--gray-500);font-size:12px;">TOTAL</td>
+            <td>${totalLead.toLocaleString('id-ID')}</td>
+            <td>${totalClosing.toLocaleString('id-ID')}</td>
+            <td>
+              <div class="cr-bar-wrap">
+                <div class="cr-bar-bg"><div class="cr-bar-fill" style="width:${totalCR}%;background:${totalCrColor};"></div></div>
+                <span class="cr-label" style="color:${totalCrColor};">${totalCR}%</span>
+              </div>
+            </td>
+            <td><span style="color:var(--gray-500);font-size:12px;">${totalBelum.toLocaleString('id-ID')}</span></td>
+          </tr>`;
+
+        html += `
+          <div class="perf-section card">
+            <div class="perf-product-header">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              ${pName}
+            </div>
+            <div class="table-wrap">
+              <table class="perf-table">
+                <thead>
+                  <tr>
+                    <th>CS</th>
+                    <th>Lead</th>
+                    <th>Closing</th>
+                    <th style="min-width:140px;">Closing Rate</th>
+                    <th>Belum Closing</th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>
+          </div>`;
+      });
+
+      document.getElementById('perfContent').innerHTML = html;
+    } catch(e) {
+      document.getElementById('perfContent').innerHTML = `<div class="empty-perf">Gagal load data: ${e.message}</div>`;
+    }
+  }
+
+  // ── Modal Belum Closing ──
+  function openBelumModal(orders, csName, productName) {
+    _modalOrders  = orders.filter(o => BELUM_SET.has(o.status));
+    _activeSubKey = null;
+
+    document.getElementById('modalTitle').textContent = `Belum Closing — ${csName}`;
+    document.getElementById('modalSub').textContent   = productName;
+    document.getElementById('subList').style.display  = 'none';
+    document.getElementById('subList').innerHTML      = '';
+
+    renderSubCards();
+    document.getElementById('belumModal').classList.add('open');
+  }
+
+  function closeBelumModal() {
+    document.getElementById('belumModal').classList.remove('open');
+    _modalOrders  = [];
+    _activeSubKey = null;
+  }
+
+  function renderSubCards() {
+    const html = SUB_LIST.map(s => {
+      const count = _modalOrders.filter(o => o.status === s.key).length;
+      const isActive = _activeSubKey === s.key;
+      return `
+        <div class="sub-card ${isActive ? 'active' : ''}" onclick="toggleSubList('${s.key}')">
+          <div class="sub-card-label">${s.label}</div>
+          <div class="sub-card-value">${count}</div>
+        </div>`;
+    }).join('');
+    document.getElementById('subCards').innerHTML = html;
+  }
+
+  function toggleSubList(key) {
+    if (_activeSubKey === key) {
+      // Tutup kalau klik kartu yang sama
+      _activeSubKey = null;
+      document.getElementById('subList').style.display = 'none';
+      document.getElementById('subList').innerHTML = '';
+    } else {
+      _activeSubKey = key;
+      const filtered = _modalOrders.filter(o => o.status === key);
+      const subLabel = SUB_LIST.find(s => s.key === key)?.label || key;
+
+      let listHtml = '';
+      if (!filtered.length) {
+        listHtml = '<div style="padding:16px;text-align:center;color:var(--gray-400);font-size:13px;">Tidak ada order</div>';
+      } else {
+        listHtml = filtered.map(o => `
+          <div class="sub-list-item">
+            <div class="sub-list-avatar">${(o.customer_name || '?')[0].toUpperCase()}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;">${o.customer_name || '-'}</div>
+              <div style="font-size:12px;color:var(--gray-400);">💬 ${o.customer_wa || '-'}</div>
+            </div>
+          </div>`).join('');
+      }
+
+      document.getElementById('subList').innerHTML = `
+        <div style="padding:10px 4px 6px;font-size:12px;font-weight:700;color:var(--gray-500);text-transform:uppercase;">
+          ${subLabel} — ${filtered.length} order
+        </div>
+        ${listHtml}`;
+      document.getElementById('subList').style.display = 'block';
+    }
+    renderSubCards();
+  }
+</script>
+</body>
+</html>

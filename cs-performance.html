@@ -197,7 +197,7 @@
         ? `&created_at=gte.${_from.toISOString()}&created_at=lte.${_to.toISOString()}` : '';
 
       const [orders, products, csTeam] = await Promise.all([
-        sbGetAll('orders', `?select=product_id,cs_id,status${dateQ}`),
+        sbGetAll('orders', `?select=product_id,cs_id,status,closing_qty,closing_value${dateQ}`),
         sbGet('products', '?select=id,name,image_url&status=eq.active&order=name.asc'),
         sbGet('cs_team', '?select=id,name&order=name.asc'),
       ]);
@@ -226,6 +226,14 @@
         return;
       }
 
+      // Format omset singkat: 5.400.000 → 5.4jt, 900.000 → 900rb
+      function fmtOmset(n) {
+        if (!n) return '—';
+        if (n >= 1000000) return 'Rp ' + (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'jt';
+        if (n >= 1000)    return 'Rp ' + Math.round(n / 1000) + 'rb';
+        return 'Rp ' + n.toLocaleString('id-ID');
+      }
+
       let html = '';
       productIds.forEach(pid => {
         const p      = productMap[pid] || {};
@@ -236,12 +244,16 @@
           (csMap[a] || 'Tanpa CS').localeCompare(csMap[b] || 'Tanpa CS')
         );
 
-        const allPOrders   = csIds.flatMap(cid => csData[cid]);
-        const totalLead    = allPOrders.length;
-        const totalClosing = allPOrders.filter(o => o.status === 'closing').length;
-        const totalBelum   = allPOrders.filter(o => BELUM_SET.has(o.status)).length;
-        const totalCR      = totalLead > 0 ? Math.round(totalClosing / totalLead * 100) : 0;
-        const totalColor   = crColor(totalCR);
+        const allPOrders    = csIds.flatMap(cid => csData[cid]);
+        const allClosing    = allPOrders.filter(o => o.status === 'closing');
+        const totalLead     = allPOrders.length;
+        const totalClosing  = allClosing.length;
+        const totalBelum    = allPOrders.filter(o => BELUM_SET.has(o.status)).length;
+        const totalBotol    = allClosing.reduce((s, o) => s + (o.closing_qty || 0), 0);
+        const totalOmset    = allClosing.reduce((s, o) => s + (o.closing_value || 0), 0);
+        const totalUpsell   = totalClosing > 0 && totalBotol > 0 ? (totalBotol / totalClosing).toFixed(2).replace(/\.?0+$/, '') : null;
+        const totalCR       = totalLead > 0 ? Math.round(totalClosing / totalLead * 100) : 0;
+        const totalColor    = crColor(totalCR);
 
         // Foto atau placeholder
         const imgHtml = pImg
@@ -251,14 +263,17 @@
 
         // Rows CS
         let rows = csIds.map(cid => {
-          const csOrders = csData[cid];
-          const csName   = csMap[cid] || 'Tanpa CS';
-          const lead     = csOrders.length;
-          const closing  = csOrders.filter(o => o.status === 'closing').length;
-          const belum    = csOrders.filter(o => BELUM_SET.has(o.status)).length;
-          const cr       = lead > 0 ? Math.round(closing / lead * 100) : 0;
-          const color    = crColor(cr);
-          const ordersJson = JSON.stringify(csOrders).replace(/'/g, '&#39;');
+          const csOrders  = csData[cid];
+          const csClosing = csOrders.filter(o => o.status === 'closing');
+          const csName    = csMap[cid] || 'Tanpa CS';
+          const lead      = csOrders.length;
+          const closing   = csClosing.length;
+          const belum     = csOrders.filter(o => BELUM_SET.has(o.status)).length;
+          const botol     = csClosing.reduce((s, o) => s + (o.closing_qty || 0), 0);
+          const omset     = csClosing.reduce((s, o) => s + (o.closing_value || 0), 0);
+          const upsell    = closing > 0 && botol > 0 ? (botol / closing).toFixed(2).replace(/\.?0+$/, '') : null;
+          const cr        = lead > 0 ? Math.round(closing / lead * 100) : 0;
+          const color     = crColor(cr);
 
           return `
             <tr>
@@ -270,6 +285,14 @@
                   <div class="cr-bar-bg"><div class="cr-bar-fill" style="width:${cr}%;background:${color};"></div></div>
                   <span class="cr-label" style="color:${color};">${cr}%</span>
                 </div>
+              </td>
+              <td>${botol > 0 ? `<span style="font-weight:600;">${botol.toLocaleString('id-ID')}</span>` : '<span style="color:var(--gray-300);">—</span>'}</td>
+              <td>${upsell
+                ? `<span style="font-weight:700;color:var(--primary);">${upsell}x</span>`
+                : '<span style="color:var(--gray-300);">—</span>'
+              }</td>
+              <td>
+                <span style="font-weight:600;color:var(--green);" title="Rp ${omset.toLocaleString('id-ID')}">${fmtOmset(omset)}</span>
               </td>
               <td>
                 ${belum > 0
@@ -292,6 +315,9 @@
                 <span class="cr-label" style="color:${totalColor};">${totalCR}%</span>
               </div>
             </td>
+            <td><span style="font-weight:700;">${totalBotol > 0 ? totalBotol.toLocaleString('id-ID') : '—'}</span></td>
+            <td><span style="font-weight:700;color:var(--primary);">${totalUpsell ? totalUpsell + 'x' : '—'}</span></td>
+            <td><span style="font-weight:700;color:var(--green);" title="Rp ${totalOmset.toLocaleString('id-ID')}">${fmtOmset(totalOmset)}</span></td>
             <td><span style="color:var(--gray-500);font-size:12px;">${totalBelum.toLocaleString('id-ID')}</span></td>
           </tr>`;
 
@@ -301,7 +327,7 @@
               ${imgHtml}
               <div class="perf-product-info">
                 <div class="perf-product-name">${pName}</div>
-                <div class="perf-product-meta">${totalLead} lead · ${totalClosing} closing · CR ${totalCR}%</div>
+                <div class="perf-product-meta">${totalLead} lead · ${totalClosing} closing · CR ${totalCR}% · ${totalBotol > 0 ? totalBotol + ' botol · ' : ''}${totalOmset > 0 ? fmtOmset(totalOmset) : ''}</div>
               </div>
               <span class="perf-chevron" id="perf-chev-${pid}">▸</span>
             </div>
@@ -314,6 +340,9 @@
                       <th>Lead</th>
                       <th>Closing</th>
                       <th style="min-width:130px;">Closing Rate</th>
+                      <th>Botol</th>
+                      <th>Upselling</th>
+                      <th>Omset</th>
                       <th>Belum Closing</th>
                     </tr>
                   </thead>

@@ -191,6 +191,22 @@
     return n;
   }
 
+  // ── TikTok Pixel browser-side ───────────────────────────
+  function initTikTokPixel(pixelId) {
+    if (!pixelId) return;
+    !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];
+    ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"];
+    ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};
+    for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);
+    ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};
+    ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";
+    ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};
+    var o=document.createElement("script");o.type="text/javascript",o.async=!0,o.src=i+"?sdkid="+e+"&lib="+t;
+    var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};
+    ttq.load(pixelId);ttq.page();
+    }(window,document,'ttq');
+  }
+
   // ── Google Tag Manager ──────────────────────────────────
   function initGTM(gtmId) {
     if (!gtmId) return;
@@ -252,7 +268,7 @@
 
     try {
       // Step 1: load product dulu (butuh product.id untuk query berikutnya)
-      const products = await sbGet('products', `?slug=eq.${slug}&status=eq.active&limit=1&select=id,name,slug,price,pixel_id,access_token,gtm_id,followup_welcome,followup_redirect,followup_templates,status`);
+      const products = await sbGet('products', `?slug=eq.${slug}&status=eq.active&limit=1&select=id,name,slug,price,pixel_id,access_token,gtm_id,tiktok_pixel_id,tiktok_access_token,followup_welcome,followup_redirect,followup_templates,status`);
       if (!products.length) { showError(); return; }
       product = products[0];
 
@@ -275,6 +291,7 @@
       document.title = product.name + ' — Order';
       initPixel(product.pixel_id, checkoutPage.pixel_view_event);
       initGTM(product.gtm_id);
+      initTikTokPixel(product.tiktok_pixel_id);
       renderPage();
       document.getElementById('checkoutWrap').style.display = '';
 
@@ -526,6 +543,31 @@
           currency: 'IDR',
           transaction_id: orderId || Date.now().toString(),
         });
+      }
+
+      // TikTok Pixel — PlaceAnOrder (prospek masuk)
+      if (window.ttq && product.tiktok_pixel_id) {
+        ttq.track('PlaceAnOrder', {
+          value:    product.price,
+          currency: 'IDR',
+          contents: [{ content_id: product.id, content_name: product.name, quantity: 1, price: product.price }],
+        });
+      }
+      // TikTok Events API — PlaceAnOrder server-side
+      if (product.tiktok_pixel_id && product.tiktok_access_token) {
+        fetch(`${API_URL}/send-tiktok-event`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pixel_code:    product.tiktok_pixel_id,
+            access_token:  product.tiktok_access_token,
+            event_name:    'PlaceAnOrder',
+            event_id:      'place_' + (orderId || Date.now().toString(36)),
+            user_data:     { ph: normalizeWA(customerWA), em: customerEmail || null },
+            custom_data:   { product_id: product.id, product_name: product.name, value: product.price, currency: 'IDR', order_id: orderId },
+            event_source_url: window.location.href,
+          }),
+        }).catch(() => {});
       }
 
       // 2-5. Semua background tasks — fire and forget, tidak perlu ditunggu

@@ -359,33 +359,58 @@
         if (ketCell) ketCell.outerHTML = renderKetCell(id, status);
       }
 
-      // Kirim Purchase event ke Meta CAPI saat status → closing
+      // Kirim Purchase event saat status → closing
       const _o = allOrders.find(o => o.id === id);
       if (status === 'closing' && _o && _o.product_id) {
         try {
-          const products = await sbGet('products', `?id=eq.${_o.product_id}&select=pixel_id,access_token`);
+          const products = await sbGet('products', `?id=eq.${_o.product_id}&select=pixel_id,access_token,tiktok_pixel_id,tiktok_access_token,price,name`);
           const product = products[0];
+
+          // Meta CAPI Purchase
           if (product && product.pixel_id && product.access_token) {
-            await fetch(`${API_URL}/send-capi`, {
+            fetch(`${API_URL}/send-capi`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                pixel_id: product.pixel_id,
+                pixel_id:     product.pixel_id,
                 access_token: product.access_token,
-                event_name: 'Purchase',
-                event_id: 'closing_' + id,
+                event_name:   'Purchase',
+                event_id:     'closing_meta_' + id,
                 user_data: {
-                  ph: _o.customer_wa || '',
-                  fn: (_o.customer_name || '').split(' ')[0].toLowerCase(),
-                  ln: (_o.customer_name || '').split(' ').slice(1).join(' ').toLowerCase(),
-                  ct: (_o.customer_city || '').toLowerCase(),
-                  country: 'id'
-                }
-              })
-            });
+                  ph:      _o.customer_wa || '',
+                  fn:      (_o.customer_name || '').split(' ')[0].toLowerCase(),
+                  ln:      (_o.customer_name || '').split(' ').slice(1).join(' ').toLowerCase(),
+                  ct:      (_o.customer_city || '').toLowerCase(),
+                  country: 'id',
+                },
+                custom_data: {
+                  product_name: product.name,
+                  order_id:     id,
+                  value:        product.price || 0,
+                  currency:     'IDR',
+                },
+              }),
+            }).catch(e => console.warn('Meta CAPI Purchase gagal:', e.message));
           }
-        } catch(capiErr) {
-          console.warn('CAPI Purchase gagal:', capiErr.message);
+
+          // TikTok Events API Purchase
+          if (product && product.tiktok_pixel_id && product.tiktok_access_token) {
+            fetch(`${API_URL}/send-tiktok-event`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                pixel_code:   product.tiktok_pixel_id,
+                access_token: product.tiktok_access_token,
+                event_name:   'Purchase',
+                event_id:     'closing_tt_' + id,
+                user_data:    { ph: _o.customer_wa || '', em: _o.customer_email || null },
+                custom_data:  { product_id: _o.product_id, product_name: product.name, value: product.price || 0, currency: 'IDR', order_id: id },
+              }),
+            }).catch(e => console.warn('TikTok Events Purchase gagal:', e.message));
+          }
+
+        } catch(err) {
+          console.warn('Purchase tracking gagal:', err.message);
         }
       }
     } catch(e) {

@@ -191,6 +191,18 @@
     return n;
   }
 
+  // ── Google Tag Manager ──────────────────────────────────
+  function initGTM(gtmId) {
+    if (!gtmId) return;
+    window.dataLayer = window.dataLayer || [];
+    (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;
+    j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
+    f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer',gtmId);
+  }
+
   // ── Meta Pixel browser-side ──────────────────────────────
   function initPixel(pixelId, viewEvent) {
     if (!pixelId) return;
@@ -240,7 +252,7 @@
 
     try {
       // Step 1: load product dulu (butuh product.id untuk query berikutnya)
-      const products = await sbGet('products', `?slug=eq.${slug}&status=eq.active&limit=1&select=id,name,slug,price,pixel_id,access_token,followup_welcome,followup_redirect,followup_templates,status`);
+      const products = await sbGet('products', `?slug=eq.${slug}&status=eq.active&limit=1&select=id,name,slug,price,pixel_id,access_token,gtm_id,followup_welcome,followup_redirect,followup_templates,status`);
       if (!products.length) { showError(); return; }
       product = products[0];
 
@@ -262,6 +274,7 @@
 
       document.title = product.name + ' — Order';
       initPixel(product.pixel_id, checkoutPage.pixel_view_event);
+      initGTM(product.gtm_id);
       renderPage();
       document.getElementById('checkoutWrap').style.display = '';
 
@@ -504,6 +517,16 @@
 
       // Hapus dari abandoned cart — order berhasil masuk
       deleteAbandoned();
+
+      // GTM Purchase event — fire and forget
+      if (product.gtm_id && window.dataLayer) {
+        window.dataLayer.push({
+          event: 'purchase',
+          value: product.price,
+          currency: 'IDR',
+          transaction_id: orderId || Date.now().toString(),
+        });
+      }
 
       // 2-5. Semua background tasks — fire and forget, tidak perlu ditunggu
       const capiEvent = checkoutPage.pixel_event || 'Lead';

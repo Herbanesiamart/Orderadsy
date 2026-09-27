@@ -61,7 +61,7 @@
     <button class="detail-tab active" onclick="showTab('stats',this)">📊 Statistik</button>
     <button class="detail-tab" onclick="showTab('followup',this)">💬 Follow-up Text</button>
     <button class="detail-tab" onclick="showTab('assignation',this)">👥 Assignation CS</button>
-    <button class="detail-tab" onclick="showTab('pixel',this)">📡 Pixel & CAPI</button>
+    <button class="detail-tab" onclick="showTab('pixel',this)">📡 Pixel, CAPI & GTM</button>
   </div>
 
   <!-- Tab: Statistik -->
@@ -223,7 +223,7 @@
 
   <!-- Tab: Pixel & CAPI -->
   <div id="tab-pixel" style="display:none;">
-    <div class="card card-body">
+    <div class="card card-body" style="margin-bottom:16px;">
       <div class="section-title mb-16">📡 Tracking Meta Pixel + CAPI</div>
       <div class="form-group">
         <label class="form-label">Facebook Pixel ID</label>
@@ -238,6 +238,19 @@
         ℹ️ Pixel ID & Access Token berlaku untuk semua checkout page produk ini. Event yang dikirim (saat dibuka & saat submit) dikonfigurasi per checkout page di <strong>Checkout Builder</strong>.
       </div>
       <button class="btn btn-primary" onclick="savePixel()">Simpan Pixel Setting</button>
+    </div>
+
+    <div class="card card-body">
+      <div class="section-title mb-16">🏷️ Google Tag Manager</div>
+      <div class="form-group">
+        <label class="form-label">GTM Container ID</label>
+        <input type="text" class="form-control" id="editGtmId" placeholder="GTM-XXXXXXX">
+        <div class="form-hint">Google Tag Manager → Admin → Container ID (format: GTM-XXXXXXX)</div>
+      </div>
+      <div style="background:var(--blue-light,#EFF6FF);border:1px solid #BFDBFE;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--primary);margin-bottom:16px;">
+        ℹ️ GTM akan otomatis di-load di checkout page. Saat order berhasil, event <strong>purchase</strong> dikirim ke dataLayer dengan value harga produk. Atur trigger di GTM dashboard.
+      </div>
+      <button class="btn btn-primary" onclick="saveGtm()">Simpan GTM Setting</button>
     </div>
   </div>
 </div>
@@ -352,6 +365,7 @@
       switchFuSub('pasif');
       document.getElementById('editPixelId').value = product.pixel_id || '';
       document.getElementById('editAccessToken').value = product.access_token || '';
+      document.getElementById('editGtmId').value = product.gtm_id || '';
 
       loadStats();
       loadCheckoutPages();
@@ -576,6 +590,15 @@
         access_token: document.getElementById('editAccessToken').value.trim() || null,
       });
       showToast('Pixel setting disimpan', 'success');
+    } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
+  }
+
+  async function saveGtm() {
+    try {
+      await sbPatch('products', `?id=eq.${productId}`, {
+        gtm_id: document.getElementById('editGtmId').value.trim() || null,
+      });
+      showToast('GTM setting disimpan', 'success');
     } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
   }
 

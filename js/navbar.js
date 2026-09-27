@@ -14,6 +14,7 @@ function renderNavbar(activePage) {
       <a href="dashboard.html" class="nav-link ${activePage==='dashboard'?'active':''}">Dashboard</a>
       ${admin ? `<a href="products.html" class="nav-link ${activePage==='products'?'active':''}">Products</a>` : ''}
       <a href="orders.html" class="nav-link ${activePage==='orders'?'active':''}">Orders</a>
+      ${admin ? `<a href="cs-performance.html" class="nav-link ${activePage==='cs-performance'?'active':''}">Performance</a>` : ''}
       <div class="nav-dropdown" id="navDropdown">
         <button class="nav-link ${activePage==='others'?'active':''}" onclick="toggleNavDropdown(event)">Others ▾</button>
         <div class="nav-dropdown-menu">

@@ -139,6 +139,7 @@ body {
 .hamburger-btn:hover { background: var(--gray-100); }
 
 .mobile-menu { display: none; }
+.navbar-nav-mobile { display: none; }
 
 .btn-add-product {
   background: var(--accent);
@@ -933,6 +934,8 @@ select.form-control { cursor: pointer; }
   .navbar-brand { font-size: 0; margin-right: 0; }
   .navbar-brand img { width: 26px; height: 26px; }
   .navbar-nav { display: none; }
+  .navbar-nav-mobile { display: flex; gap: 0; align-items: center; }
+  .navbar-nav-mobile .nav-link { padding: 5px 8px; font-size: 12px; }
   .btn-add-product { display: none; }
   .hamburger-btn { display: flex; }
 

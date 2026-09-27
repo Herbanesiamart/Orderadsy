@@ -98,34 +98,39 @@
   let _dateTo   = null;
   let dateFilter;
 
-  // Reload saat tab aktif kembali
+  // Reload saat tab aktif kembali — cooldown 2 menit agar tidak reload terus-terusan
+  let _lastLoadTime = 0;
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') loadOrders(currentPage);
+    if (document.visibilityState === 'visible' && Date.now() - _lastLoadTime > 120000) {
+      loadOrders(currentPage);
+    }
   });
 
-  // Supabase Realtime
+  // Supabase Realtime — debounce 3 detik
+  let _realtimeTimer = null;
+  function scheduleReload(page = currentPage) {
+    clearTimeout(_realtimeTimer);
+    _realtimeTimer = setTimeout(() => {
+      if (document.getElementById('detailModal').classList.contains('hidden')) {
+        loadOrders(page);
+      }
+    }, 3000);
+  }
+
   function initRealtime() {
     const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     _sb.channel('orders-realtime')
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'orders' },
         (payload) => {
-          // Cek CS filter — kalau CS login, hanya refresh kalau order miliknya
           const csId = getCSId();
           if (csId && payload.new?.cs_id !== csId) return;
-          // Kembali ke hal.1 kalau ada order baru, modal tidak terbuka
-          if (document.getElementById('detailModal').classList.contains('hidden')) {
-            loadOrders(1);
-          }
+          scheduleReload(1);
         }
       )
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'orders' },
-        () => {
-          if (document.getElementById('detailModal').classList.contains('hidden')) {
-            loadOrders(currentPage);
-          }
-        }
+        () => scheduleReload(currentPage)
       )
       .subscribe();
   }
@@ -205,7 +210,10 @@
     const dataQ  = `?${filterStr}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,is_duplicate,products(name,followup_welcome),cs_team(name,wa_number),checkout_pages(fields_config)`;
 
     try {
-      document.getElementById('ordersTable').innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--gray-400);">Loading...</td></tr>`;
+      // Hanya tampilkan "Loading..." kalau tabel masih kosong (pertama kali load)
+      if (!allOrders.length) {
+        document.getElementById('ordersTable').innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--gray-400);">Loading...</td></tr>`;
+      }
       const [orders, countRes] = await Promise.all([
         sbGet('orders', dataQ),
         fetch(`${SUPABASE_URL}/rest/v1/orders?${filterStr}select=id`, {
@@ -215,6 +223,7 @@
       allOrders = orders;
       const cr = countRes.headers.get('Content-Range');
       totalCount = parseInt(cr?.split('/')[1] || '0');
+      _lastLoadTime = Date.now();
       renderOrders(orders);
       renderPagination();
 

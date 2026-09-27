@@ -8,38 +8,60 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <style>
-  .perf-section { margin-bottom: 24px; }
+  .perf-section { margin-bottom: 12px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--gray-200); }
+
   .perf-product-header {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 20px;
-    background: var(--primary-light, #FFF8E1);
-    border-left: 4px solid var(--primary);
-    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-    font-weight: 700; font-size: 15px; color: var(--gray-800);
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; cursor: pointer; user-select: none;
+    background: var(--white); transition: background .15s;
   }
+  .perf-product-header:hover { background: var(--gray-50); }
+
+  .perf-product-img {
+    width: 40px; height: 40px; border-radius: 8px;
+    object-fit: cover; flex-shrink: 0;
+    background: var(--gray-100);
+  }
+  .perf-product-img-placeholder {
+    width: 40px; height: 40px; border-radius: 8px; flex-shrink: 0;
+    background: var(--primary-light); display: flex; align-items: center;
+    justify-content: center; font-size: 18px;
+  }
+  .perf-product-info { flex: 1; min-width: 0; }
+  .perf-product-name { font-weight: 700; font-size: 14px; color: var(--gray-800); }
+  .perf-product-meta { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
+
+  .perf-chevron {
+    font-size: 12px; color: var(--gray-400); transition: transform .2s; flex-shrink: 0;
+  }
+  .perf-chevron.open { transform: rotate(90deg); }
+
+  .perf-body { display: none; border-top: 1px solid var(--gray-200); }
+  .perf-body.open { display: block; }
+
   .perf-table { width: 100%; border-collapse: collapse; }
   .perf-table th {
-    padding: 10px 16px; font-size: 12px; font-weight: 600;
+    padding: 10px 16px; font-size: 11px; font-weight: 600;
     color: var(--gray-400); text-transform: uppercase;
     border-bottom: 1px solid var(--gray-200); text-align: left;
     background: var(--gray-50);
   }
   .perf-table td {
-    padding: 12px 16px; font-size: 13px;
-    border-bottom: 1px solid var(--gray-100);
-    vertical-align: middle;
+    padding: 11px 16px; font-size: 13px;
+    border-bottom: 1px solid var(--gray-100); vertical-align: middle;
   }
   .perf-table tr:last-child td { border-bottom: none; }
-  .perf-table tr:hover td { background: var(--gray-50); }
+  .perf-table tbody tr:not(.total-row):hover td { background: var(--gray-50); }
+  .total-row td { background: var(--gray-50); font-weight: 700; color: var(--gray-600); }
 
   .cr-bar-wrap { display: flex; align-items: center; gap: 8px; }
-  .cr-bar-bg { flex: 1; height: 6px; background: var(--gray-200); border-radius: 99px; min-width: 60px; }
-  .cr-bar-fill { height: 6px; border-radius: 99px; background: var(--primary); }
+  .cr-bar-bg { flex: 1; height: 6px; background: var(--gray-200); border-radius: 99px; min-width: 50px; }
+  .cr-bar-fill { height: 6px; border-radius: 99px; }
   .cr-label { font-weight: 700; font-size: 13px; min-width: 36px; }
 
   .belum-btn {
     background: none; border: 1px solid var(--gray-300);
-    padding: 4px 10px; border-radius: 6px;
+    padding: 3px 10px; border-radius: 6px;
     font-size: 12px; font-weight: 600; cursor: pointer;
     color: var(--gray-700); transition: all .15s;
   }
@@ -53,24 +75,24 @@
   .perf-modal-overlay.open { display: flex; }
   .perf-modal {
     background: var(--white); border-radius: var(--radius);
-    width: 100%; max-width: 580px; max-height: 85vh;
+    width: 100%; max-width: 560px; max-height: 85vh;
     overflow: hidden; display: flex; flex-direction: column;
     box-shadow: 0 20px 60px rgba(0,0,0,0.2);
   }
   .perf-modal-header {
     padding: 16px 20px; border-bottom: 1px solid var(--gray-200);
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
   }
   .perf-modal-title { font-weight: 700; font-size: 15px; color: var(--gray-800); }
   .perf-modal-sub { font-size: 12px; color: var(--gray-400); margin-top: 2px; }
   .perf-modal-body { overflow-y: auto; padding: 20px; flex: 1; }
 
-  .sub-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
+  .sub-cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 16px; }
   @media (max-width: 500px) { .sub-cards { grid-template-columns: repeat(2,1fr); } }
 
   .sub-card {
     background: var(--gray-50); border: 2px solid transparent;
-    border-radius: 10px; padding: 12px 10px; text-align: center;
+    border-radius: 10px; padding: 10px 8px; text-align: center;
     cursor: pointer; transition: all .15s;
   }
   .sub-card:hover { border-color: var(--primary); background: var(--primary-light); }
@@ -78,11 +100,10 @@
   .sub-card-label { font-size: 11px; color: var(--gray-400); font-weight: 500; margin-bottom: 4px; }
   .sub-card-value { font-size: 20px; font-weight: 700; color: var(--gray-700); }
 
-  .sub-list { border-top: 1px solid var(--gray-100); margin-top: 4px; }
+  .sub-list { border-top: 1px solid var(--gray-100); padding-top: 4px; }
   .sub-list-item {
     display: flex; align-items: center; gap: 12px;
-    padding: 10px 4px; border-bottom: 1px solid var(--gray-100);
-    font-size: 13px;
+    padding: 10px 4px; border-bottom: 1px solid var(--gray-100); font-size: 13px;
   }
   .sub-list-item:last-child { border-bottom: none; }
   .sub-list-avatar {
@@ -92,7 +113,7 @@
     font-weight: 700; font-size: 12px; flex-shrink: 0;
   }
 
-  .empty-perf { text-align: center; padding: 40px 20px; color: var(--gray-400); font-size: 14px; }
+  .empty-perf { text-align: center; padding: 48px 20px; color: var(--gray-400); font-size: 14px; }
 </style>
 </head>
 <body>
@@ -134,7 +155,7 @@
 <script src="js/navbar.js"></script>
 <script src="js/date-filter.js"></script>
 <script>
-  requireAuth(true); // admin only
+  requireAuth(true);
   renderNavbar('cs-performance');
 
   const BELUM_SET = new Set(['pasif','ongkir','harga','ooc','konsul','no_wa','blokir']);
@@ -149,25 +170,34 @@
   ];
 
   let _from = null, _to = null;
-  let _modalOrders = [];
-  let _activeSubKey = null;
+  let _modalOrders = [], _activeSubKey = null;
 
-  // ── Date Filter ──
   const dateFilter = new DateFilter(
     document.getElementById('dateFilterBtn'),
     ({ from, to }) => { _from = from; _to = to; loadPerformance(); }
   );
 
+  function crColor(cr) {
+    return cr >= 60 ? 'var(--green)' : cr >= 35 ? 'var(--primary)' : 'var(--red)';
+  }
+
+  function toggleProduct(pid) {
+    const body    = document.getElementById(`perf-body-${pid}`);
+    const chevron = document.getElementById(`perf-chev-${pid}`);
+    const isOpen  = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    chevron.classList.toggle('open', !isOpen);
+  }
+
   async function loadPerformance() {
     document.getElementById('perfContent').innerHTML = '<div class="empty-perf">Loading...</div>';
     try {
       const dateQ = _from && _to
-        ? `&created_at=gte.${_from.toISOString()}&created_at=lte.${_to.toISOString()}`
-        : '';
+        ? `&created_at=gte.${_from.toISOString()}&created_at=lte.${_to.toISOString()}` : '';
 
       const [orders, products, csTeam] = await Promise.all([
         sbGetAll('orders', `?select=id,product_id,cs_id,status,customer_name,customer_wa${dateQ}`),
-        sbGet('products', '?select=id,name&status=eq.active&order=name.asc'),
+        sbGet('products', '?select=id,name,image_url&status=eq.active&order=name.asc'),
         sbGet('cs_team', '?select=id,name&order=name.asc'),
       ]);
 
@@ -177,9 +207,9 @@
       }
 
       const csMap      = Object.fromEntries(csTeam.map(c => [c.id, c.name]));
-      const productMap = Object.fromEntries(products.map(p => [p.id, p.name]));
+      const productMap = Object.fromEntries(products.map(p => [p.id, p]));
 
-      // Group orders by product → cs
+      // Group orders: product → cs
       const byProduct = {};
       orders.forEach(o => {
         if (!o.product_id) return;
@@ -189,9 +219,7 @@
         byProduct[o.product_id][csKey].push(o);
       });
 
-      // Hanya tampilkan produk yang ada di products aktif
       const productIds = products.map(p => p.id).filter(id => byProduct[id]);
-
       if (!productIds.length) {
         document.getElementById('perfContent').innerHTML = '<div class="empty-perf">Tidak ada data di periode ini.</div>';
         return;
@@ -199,87 +227,98 @@
 
       let html = '';
       productIds.forEach(pid => {
-        const pName   = productMap[pid] || 'Produk';
-        const csData  = byProduct[pid];
-        const csIds   = Object.keys(csData).sort((a, b) => {
-          const nameA = csMap[a] || 'Tanpa CS';
-          const nameB = csMap[b] || 'Tanpa CS';
-          return nameA.localeCompare(nameB);
-        });
+        const p      = productMap[pid] || {};
+        const pName  = p.name || 'Produk';
+        const pImg   = p.image_url;
+        const csData = byProduct[pid];
+        const csIds  = Object.keys(csData).sort((a, b) =>
+          (csMap[a] || 'Tanpa CS').localeCompare(csMap[b] || 'Tanpa CS')
+        );
 
-        // Total baris ringkasan produk
-        const allPOrders = csIds.flatMap(cid => csData[cid]);
+        const allPOrders   = csIds.flatMap(cid => csData[cid]);
         const totalLead    = allPOrders.length;
         const totalClosing = allPOrders.filter(o => o.status === 'closing').length;
-        const totalCR      = totalLead > 0 ? Math.round(totalClosing / totalLead * 100) : 0;
         const totalBelum   = allPOrders.filter(o => BELUM_SET.has(o.status)).length;
+        const totalCR      = totalLead > 0 ? Math.round(totalClosing / totalLead * 100) : 0;
+        const totalColor   = crColor(totalCR);
 
-        let rows = '';
-        csIds.forEach(cid => {
-          const csOrders  = csData[cid];
-          const csName    = csMap[cid] || 'Tanpa CS';
-          const lead      = csOrders.length;
-          const closing   = csOrders.filter(o => o.status === 'closing').length;
-          const cr        = lead > 0 ? Math.round(closing / lead * 100) : 0;
-          const belum     = csOrders.filter(o => BELUM_SET.has(o.status)).length;
-          const crColor   = cr >= 60 ? 'var(--green)' : cr >= 35 ? 'var(--primary)' : 'var(--red)';
-          const encodedOrders = encodeURIComponent(JSON.stringify(csOrders));
+        // Foto atau placeholder
+        const imgHtml = pImg
+          ? `<img class="perf-product-img" src="${pImg}" alt="${pName}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+             <div class="perf-product-img-placeholder" style="display:none;">📦</div>`
+          : `<div class="perf-product-img-placeholder">📦</div>`;
 
-          rows += `
+        // Rows CS
+        let rows = csIds.map(cid => {
+          const csOrders = csData[cid];
+          const csName   = csMap[cid] || 'Tanpa CS';
+          const lead     = csOrders.length;
+          const closing  = csOrders.filter(o => o.status === 'closing').length;
+          const belum    = csOrders.filter(o => BELUM_SET.has(o.status)).length;
+          const cr       = lead > 0 ? Math.round(closing / lead * 100) : 0;
+          const color    = crColor(cr);
+          const ordersJson = JSON.stringify(csOrders).replace(/'/g, '&#39;');
+
+          return `
             <tr>
               <td><span style="font-weight:600;">${csName}</span></td>
               <td>${lead.toLocaleString('id-ID')}</td>
               <td>${closing.toLocaleString('id-ID')}</td>
               <td>
                 <div class="cr-bar-wrap">
-                  <div class="cr-bar-bg"><div class="cr-bar-fill" style="width:${cr}%;background:${crColor};"></div></div>
-                  <span class="cr-label" style="color:${crColor};">${cr}%</span>
+                  <div class="cr-bar-bg"><div class="cr-bar-fill" style="width:${cr}%;background:${color};"></div></div>
+                  <span class="cr-label" style="color:${color};">${cr}%</span>
                 </div>
               </td>
               <td>
                 ${belum > 0
-                  ? `<button class="belum-btn" onclick='openBelumModal(${JSON.stringify(csOrders)}, ${JSON.stringify(csName)}, ${JSON.stringify(pName)})'>${belum.toLocaleString('id-ID')} →</button>`
+                  ? `<button class="belum-btn" onclick='openBelumModal(${JSON.stringify(csOrders)},${JSON.stringify(csName)},${JSON.stringify(pName)})'>${belum.toLocaleString('id-ID')} →</button>`
                   : `<span style="color:var(--gray-300);font-size:12px;">—</span>`
                 }
               </td>
             </tr>`;
-        });
+        }).join('');
 
-        // Baris total produk
-        const totalCrColor = totalCR >= 60 ? 'var(--green)' : totalCR >= 35 ? 'var(--primary)' : 'var(--red)';
+        // Baris total
         rows += `
-          <tr style="background:var(--gray-50);font-weight:700;">
-            <td style="color:var(--gray-500);font-size:12px;">TOTAL</td>
+          <tr class="total-row">
+            <td style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;">Total</td>
             <td>${totalLead.toLocaleString('id-ID')}</td>
             <td>${totalClosing.toLocaleString('id-ID')}</td>
             <td>
               <div class="cr-bar-wrap">
-                <div class="cr-bar-bg"><div class="cr-bar-fill" style="width:${totalCR}%;background:${totalCrColor};"></div></div>
-                <span class="cr-label" style="color:${totalCrColor};">${totalCR}%</span>
+                <div class="cr-bar-bg"><div class="cr-bar-fill" style="width:${totalCR}%;background:${totalColor};"></div></div>
+                <span class="cr-label" style="color:${totalColor};">${totalCR}%</span>
               </div>
             </td>
             <td><span style="color:var(--gray-500);font-size:12px;">${totalBelum.toLocaleString('id-ID')}</span></td>
           </tr>`;
 
         html += `
-          <div class="perf-section card">
-            <div class="perf-product-header">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-              ${pName}
+          <div class="perf-section">
+            <div class="perf-product-header" onclick="toggleProduct('${pid}')">
+              ${imgHtml}
+              <div class="perf-product-info">
+                <div class="perf-product-name">${pName}</div>
+                <div class="perf-product-meta">${totalLead} lead · ${totalClosing} closing · CR ${totalCR}%</div>
+              </div>
+              <span class="perf-chevron" id="perf-chev-${pid}">▸</span>
             </div>
-            <div class="table-wrap">
-              <table class="perf-table">
-                <thead>
-                  <tr>
-                    <th>CS</th>
-                    <th>Lead</th>
-                    <th>Closing</th>
-                    <th style="min-width:140px;">Closing Rate</th>
-                    <th>Belum Closing</th>
-                  </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-              </table>
+            <div class="perf-body" id="perf-body-${pid}">
+              <div class="table-wrap">
+                <table class="perf-table">
+                  <thead>
+                    <tr>
+                      <th>CS</th>
+                      <th>Lead</th>
+                      <th>Closing</th>
+                      <th style="min-width:130px;">Closing Rate</th>
+                      <th>Belum Closing</th>
+                    </tr>
+                  </thead>
+                  <tbody>${rows}</tbody>
+                </table>
+              </div>
             </div>
           </div>`;
       });
@@ -294,65 +333,53 @@
   function openBelumModal(orders, csName, productName) {
     _modalOrders  = orders.filter(o => BELUM_SET.has(o.status));
     _activeSubKey = null;
-
     document.getElementById('modalTitle').textContent = `Belum Closing — ${csName}`;
     document.getElementById('modalSub').textContent   = productName;
     document.getElementById('subList').style.display  = 'none';
     document.getElementById('subList').innerHTML      = '';
-
     renderSubCards();
     document.getElementById('belumModal').classList.add('open');
   }
 
   function closeBelumModal() {
     document.getElementById('belumModal').classList.remove('open');
-    _modalOrders  = [];
-    _activeSubKey = null;
+    _modalOrders = []; _activeSubKey = null;
   }
 
   function renderSubCards() {
-    const html = SUB_LIST.map(s => {
+    document.getElementById('subCards').innerHTML = SUB_LIST.map(s => {
       const count = _modalOrders.filter(o => o.status === s.key).length;
-      const isActive = _activeSubKey === s.key;
       return `
-        <div class="sub-card ${isActive ? 'active' : ''}" onclick="toggleSubList('${s.key}')">
+        <div class="sub-card ${_activeSubKey === s.key ? 'active' : ''}" onclick="toggleSubList('${s.key}')">
           <div class="sub-card-label">${s.label}</div>
           <div class="sub-card-value">${count}</div>
         </div>`;
     }).join('');
-    document.getElementById('subCards').innerHTML = html;
   }
 
   function toggleSubList(key) {
     if (_activeSubKey === key) {
-      // Tutup kalau klik kartu yang sama
       _activeSubKey = null;
       document.getElementById('subList').style.display = 'none';
       document.getElementById('subList').innerHTML = '';
     } else {
       _activeSubKey = key;
       const filtered = _modalOrders.filter(o => o.status === key);
-      const subLabel = SUB_LIST.find(s => s.key === key)?.label || key;
-
-      let listHtml = '';
-      if (!filtered.length) {
-        listHtml = '<div style="padding:16px;text-align:center;color:var(--gray-400);font-size:13px;">Tidak ada order</div>';
-      } else {
-        listHtml = filtered.map(o => `
-          <div class="sub-list-item">
-            <div class="sub-list-avatar">${(o.customer_name || '?')[0].toUpperCase()}</div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-weight:600;">${o.customer_name || '-'}</div>
-              <div style="font-size:12px;color:var(--gray-400);">💬 ${o.customer_wa || '-'}</div>
-            </div>
-          </div>`).join('');
-      }
-
+      const label    = SUB_LIST.find(s => s.key === key)?.label || key;
       document.getElementById('subList').innerHTML = `
-        <div style="padding:10px 4px 6px;font-size:12px;font-weight:700;color:var(--gray-500);text-transform:uppercase;">
-          ${subLabel} — ${filtered.length} order
+        <div style="padding:10px 4px 6px;font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;">
+          ${label} · ${filtered.length} order
         </div>
-        ${listHtml}`;
+        ${filtered.length ? filtered.map(o => `
+          <div class="sub-list-item">
+            <div class="sub-list-avatar">${(o.customer_name||'?')[0].toUpperCase()}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;">${o.customer_name||'-'}</div>
+              <div style="font-size:12px;color:var(--gray-400);">💬 ${o.customer_wa||'-'}</div>
+            </div>
+          </div>`).join('')
+        : '<div style="padding:16px;text-align:center;color:var(--gray-400);font-size:13px;">Tidak ada order</div>'
+        }`;
       document.getElementById('subList').style.display = 'block';
     }
     renderSubCards();

@@ -209,7 +209,7 @@
       const [orders, countRes] = await Promise.all([
         sbGet('orders', dataQ),
         fetch(`${SUPABASE_URL}/rest/v1/orders?${filterStr}select=id`, {
-          headers: { ...sbH, 'Prefer': 'count=exact', 'Range': '0-0' },
+          headers: { ...getSupabaseHeaders(), 'Prefer': 'count=exact', 'Range': '0-0' },
         }),
       ]);
       allOrders = orders;

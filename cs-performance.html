@@ -171,6 +171,7 @@
 
   let _from = null, _to = null;
   let _modalOrders = [], _activeSubKey = null;
+  let _modalCsId = null, _modalProductId = null;
 
   const dateFilter = new DateFilter(
     document.getElementById('dateFilterBtn'),
@@ -196,7 +197,7 @@
         ? `&created_at=gte.${_from.toISOString()}&created_at=lte.${_to.toISOString()}` : '';
 
       const [orders, products, csTeam] = await Promise.all([
-        sbGetAll('orders', `?select=id,product_id,cs_id,status,customer_name,customer_wa${dateQ}`),
+        sbGetAll('orders', `?select=product_id,cs_id,status${dateQ}`),
         sbGet('products', '?select=id,name,image_url&status=eq.active&order=name.asc'),
         sbGet('cs_team', '?select=id,name&order=name.asc'),
       ]);
@@ -272,7 +273,7 @@
               </td>
               <td>
                 ${belum > 0
-                  ? `<button class="belum-btn" onclick='openBelumModal(${JSON.stringify(csOrders)},${JSON.stringify(csName)},${JSON.stringify(pName)})'>${belum.toLocaleString('id-ID')} →</button>`
+                  ? `<button class="belum-btn" onclick='openBelumModal(${JSON.stringify(cid)},${JSON.stringify(pid)},${JSON.stringify(csName)},${JSON.stringify(pName)})'>${belum.toLocaleString('id-ID')} →</button>`
                   : `<span style="color:var(--gray-300);font-size:12px;">—</span>`
                 }
               </td>
@@ -329,21 +330,41 @@
     }
   }
 
-  // ── Modal Belum Closing ──
-  function openBelumModal(orders, csName, productName) {
-    _modalOrders  = orders.filter(o => BELUM_SET.has(o.status));
+  // ── Modal Belum Closing — lazy fetch saat dibuka ──
+  async function openBelumModal(csId, productId, csName, productName) {
+    _modalCsId = csId; _modalProductId = productId;
     _activeSubKey = null;
+    _modalOrders  = [];
+
     document.getElementById('modalTitle').textContent = `Belum Closing — ${csName}`;
     document.getElementById('modalSub').textContent   = productName;
     document.getElementById('subList').style.display  = 'none';
     document.getElementById('subList').innerHTML      = '';
-    renderSubCards();
+    document.getElementById('subCards').innerHTML     = '<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:13px;">Loading...</div>';
     document.getElementById('belumModal').classList.add('open');
+
+    try {
+      const dateQ = _from && _to
+        ? `&created_at=gte.${_from.toISOString()}&created_at=lte.${_to.toISOString()}` : '';
+      const csQ   = csId === '__none__' ? '&cs_id=is.null' : `&cs_id=eq.${csId}`;
+      const statusQ = SUB_LIST.map(s => s.key).join(',');
+
+      const orders = await sbGet('orders',
+        `?product_id=eq.${productId}${csQ}&status=in.(${statusQ})${dateQ}&select=customer_name,customer_wa,status&order=created_at.desc`
+      );
+      _modalOrders = orders;
+    } catch(e) {
+      document.getElementById('subCards').innerHTML = `<div style="color:var(--red);font-size:13px;">Gagal load: ${e.message}</div>`;
+      return;
+    }
+
+    renderSubCards();
   }
 
   function closeBelumModal() {
     document.getElementById('belumModal').classList.remove('open');
     _modalOrders = []; _activeSubKey = null;
+    _modalCsId = null; _modalProductId = null;
   }
 
   function renderSubCards() {

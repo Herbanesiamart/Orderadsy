@@ -66,6 +66,11 @@
       <div class="kpi-label">Lead Duplikat</div>
       <div class="kpi-value" style="color:var(--gray-500);" id="kpiDuplicate">—</div>
     </div>
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:#F0FDF4;color:#16A34A;"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+      <div class="kpi-label">Total Omset</div>
+      <div class="kpi-value" style="color:#16A34A;font-size:16px;" id="kpiOmset">—</div>
+    </div>
   </div>
 
   <!-- Chart + Recent -->
@@ -231,7 +236,7 @@
 
     try {
       // 1 fetch untuk semua KPI + chart data
-      const params = [`select=status,created_at,is_duplicate`];
+      const params = [`select=status,created_at,is_duplicate,closing_value`];
       if (from && to) {
         params.push(`created_at=gte.${from.toISOString()}`);
         params.push(`created_at=lte.${to.toISOString()}`);
@@ -257,12 +262,14 @@
       const bcBlokir    = orders.filter(o => o.status === 'blokir').length;
       const duplicate   = orders.filter(o => o.is_duplicate).length;
       const rate        = total > 0 ? Math.round(closing / total * 100) : 0;
+      const omset       = orders.filter(o => o.status === 'closing').reduce((s, o) => s + (o.closing_value || 0), 0);
 
       document.getElementById('kpiOrders').textContent  = total.toLocaleString('id-ID');
       document.getElementById('kpiClosing').textContent = closing.toLocaleString('id-ID');
       document.getElementById('kpiRate').textContent    = rate + '%';
       document.getElementById('kpiPending').textContent   = belumClosing.toLocaleString('id-ID');
       document.getElementById('kpiDuplicate').textContent = duplicate.toLocaleString('id-ID');
+      document.getElementById('kpiOmset').textContent = omset > 0 ? 'Rp ' + omset.toLocaleString('id-ID') : '—';
       document.getElementById('bcPasif').textContent    = bcPasif.toLocaleString('id-ID');
       document.getElementById('bcOngkir').textContent   = bcOngkir.toLocaleString('id-ID');
       document.getElementById('bcHarga').textContent    = bcHarga.toLocaleString('id-ID');

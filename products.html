@@ -41,6 +41,7 @@
             <th>Orders</th>
             <th>Closing</th>
             <th>Closing Rate</th>
+            <th>Omset</th>
             <th>Status</th>
             <th></th>
           </tr>
@@ -81,13 +82,17 @@
       const rpcBody = {};
       if (from && to) { rpcBody.from_date = from.toISOString(); rpcBody.to_date = to.toISOString(); }
 
-      const [products, orderStats] = await Promise.all([
+      const dateQ = (rpcBody.from_date && rpcBody.to_date)
+        ? `&created_at=gte.${rpcBody.from_date}&created_at=lte.${rpcBody.to_date}` : '';
+
+      const [products, orderStats, omsetRows] = await Promise.all([
         sbGet('products', '?order=created_at.desc&select=id,name,price,status,slug'),
         fetch(`${SUPABASE_URL}/rest/v1/rpc/get_product_stats`, {
           method: 'POST',
           headers: getSupabaseHeaders(),
           body: JSON.stringify(rpcBody),
-        }).then(r => r.json()).catch(() => [])
+        }).then(r => r.json()).catch(() => []),
+        sbGet('orders', `?select=product_id,closing_value&status=eq.closing${dateQ}`).catch(() => []),
       ]);
 
       const statsMap = {};
@@ -95,10 +100,17 @@
         statsMap[o.product_id] = { total: Number(o.total), closing: Number(o.closing) };
       });
 
+      const omsetMap = {};
+      (omsetRows || []).forEach(o => {
+        if (!omsetMap[o.product_id]) omsetMap[o.product_id] = 0;
+        omsetMap[o.product_id] += (o.closing_value || 0);
+      });
+
       allProducts = products.map(p => ({
         ...p,
-        _total: statsMap[p.id]?.total || 0,
+        _total:   statsMap[p.id]?.total   || 0,
         _closing: statsMap[p.id]?.closing || 0,
+        _omset:   omsetMap[p.id]          || 0,
       }));
 
       renderTable(allProducts);
@@ -142,6 +154,7 @@
           <td>${p._total}</td>
           <td>${p._closing}</td>
           <td>${rate}%</td>
+          <td style="font-weight:600;color:#16A34A;">${p._omset > 0 ? 'Rp ' + p._omset.toLocaleString('id-ID') : '<span style="color:var(--gray-300);">—</span>'}</td>
           <td><span class="badge ${p.status==='active'?'badge-green':'badge-gray'}">${p.status==='active'?'Active':'Inactive'}</span></td>
           <td>
             <div class="flex gap-8 items-center">

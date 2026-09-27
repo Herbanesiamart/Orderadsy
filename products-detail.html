@@ -238,11 +238,11 @@
       <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
         <div class="form-group" style="margin-bottom:0;flex:1;min-width:120px;">
           <label class="form-label">Qty (pcs) <span class="req">*</span></label>
-          <input type="number" class="form-control" id="tierQtyInput" min="1" placeholder="cth: 3" style="text-align:center;">
+          <input type="number" class="form-control" id="tierQtyInput" min="1" placeholder="cth: 3" style="text-align:center;" oninput="updateTierPreview()">
         </div>
         <div class="form-group" style="margin-bottom:0;flex:2;min-width:180px;">
-          <label class="form-label">Harga per pcs (Rp) <span class="req">*</span></label>
-          <input type="number" class="form-control" id="tierPriceInput" min="0" placeholder="cth: 300000">
+          <label class="form-label">Harga Total (Rp) <span class="req">*</span></label>
+          <input type="number" class="form-control" id="tierPriceInput" min="0" placeholder="cth: 900000" oninput="updateTierPreview()">
         </div>
         <button class="btn btn-primary" style="white-space:nowrap;" onclick="addPriceTier()">+ Tambah</button>
       </div>
@@ -546,8 +546,8 @@
         <thead>
           <tr>
             <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;border-bottom:1px solid var(--gray-200);">QTY</th>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;border-bottom:1px solid var(--gray-200);">HARGA / PCS</th>
-            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;border-bottom:1px solid var(--gray-200);">TOTAL</th>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;border-bottom:1px solid var(--gray-200);">HARGA TOTAL</th>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;border-bottom:1px solid var(--gray-200);">PER PCS</th>
             <th style="border-bottom:1px solid var(--gray-200);"></th>
           </tr>
         </thead>
@@ -555,8 +555,8 @@
           ${tiers.map((t, i) => `
             <tr style="border-bottom:1px solid var(--gray-100);">
               <td style="padding:12px;font-size:15px;font-weight:700;">${t.qty} pcs</td>
-              <td style="padding:12px;font-size:14px;">Rp ${Number(t.price).toLocaleString('id-ID')}</td>
-              <td style="padding:12px;font-size:14px;font-weight:700;color:var(--primary);">Rp ${(t.qty * t.price).toLocaleString('id-ID')}</td>
+              <td style="padding:12px;font-size:15px;font-weight:700;color:var(--primary);">Rp ${Number(t.total).toLocaleString('id-ID')}</td>
+              <td style="padding:12px;font-size:12px;color:var(--gray-400);">Rp ${Math.round(t.total / t.qty).toLocaleString('id-ID')}/pcs</td>
               <td style="padding:12px;">
                 <button onclick="removePriceTier(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;padding:0;">🗑 Hapus</button>
               </td>
@@ -566,35 +566,28 @@
       </table>`;
   }
 
-  // Live preview total when typing tier
-  document.addEventListener('DOMContentLoaded', () => {
-    const qInput = document.getElementById('tierQtyInput');
-    const pInput = document.getElementById('tierPriceInput');
+  function updateTierPreview() {
+    const q = parseInt(document.getElementById('tierQtyInput')?.value) || 0;
+    const t = parseInt(document.getElementById('tierPriceInput')?.value) || 0;
     const preview = document.getElementById('tierPreview');
-    function updatePreview() {
-      const q = parseInt(qInput?.value) || 0;
-      const p = parseInt(pInput?.value) || 0;
-      if (q > 0 && p > 0) {
-        preview.style.display = '';
-        preview.textContent = `→ Total: Rp ${(q * p).toLocaleString('id-ID')}`;
-      } else {
-        preview.style.display = 'none';
-      }
+    if (q > 0 && t > 0) {
+      preview.style.display = '';
+      preview.textContent = `→ Rp ${Math.round(t / q).toLocaleString('id-ID')}/pcs`;
+    } else {
+      preview.style.display = 'none';
     }
-    qInput?.addEventListener('input', updatePreview);
-    pInput?.addEventListener('input', updatePreview);
-  });
+  }
 
   async function addPriceTier() {
     const qty   = parseInt(document.getElementById('tierQtyInput').value);
-    const price = parseInt(document.getElementById('tierPriceInput').value);
-    if (!qty  || qty <= 0)   { showToast('Isi qty terlebih dahulu', 'error'); return; }
-    if (!price || price <= 0) { showToast('Isi harga terlebih dahulu', 'error'); return; }
+    const total = parseInt(document.getElementById('tierPriceInput').value);
+    if (!qty   || qty <= 0)   { showToast('Isi qty terlebih dahulu', 'error'); return; }
+    if (!total || total <= 0) { showToast('Isi harga total terlebih dahulu', 'error'); return; }
 
     const tiers = [...(product.price_tiers || [])];
     if (tiers.find(t => t.qty === qty)) { showToast(`Paket ${qty} pcs sudah ada`, 'error'); return; }
 
-    tiers.push({ qty, price });
+    tiers.push({ qty, total });
     tiers.sort((a, b) => a.qty - b.qty);
     await savePriceTiersDB(tiers);
 

@@ -643,8 +643,8 @@
           ${_closingTiers.map((t, i) => `
             <button class="tier-opt" id="tierOpt-${i}" onclick="selectClosingTier(${i})">
               <div class="tier-qty">${t.qty} pcs</div>
-              <div class="tier-ppu">Rp ${Number(t.price).toLocaleString('id-ID')}/pcs</div>
-              <div class="tier-total">Rp ${(t.qty * t.price).toLocaleString('id-ID')}</div>
+              <div class="tier-total">Rp ${Number(t.total).toLocaleString('id-ID')}</div>
+              <div class="tier-ppu">Rp ${Math.round(t.total / t.qty).toLocaleString('id-ID')}/pcs</div>
             </button>`).join('')}
         </div>
         <div style="font-size:12px;color:var(--gray-400);margin:12px 0 0;text-align:center;">— atau ketik qty manual —</div>`;
@@ -658,7 +658,7 @@
   function selectClosingTier(i) {
     const t = _closingTiers[i];
     _closingSelQty   = t.qty;
-    _closingSelValue = t.qty * t.price;
+    _closingSelValue = t.total;
     document.getElementById('closingQtyInput').value = t.qty;
     document.getElementById('closingValueDisplay').innerHTML =
       `Total: <strong style="color:var(--primary);font-size:17px;">Rp ${_closingSelValue.toLocaleString('id-ID')}</strong>`;
@@ -677,10 +677,10 @@
     if (_closingTiers.length) {
       const exact = _closingTiers.find(t => t.qty === qty);
       if (exact) {
-        pricePerUnit = exact.price;
+        pricePerUnit = Math.round(exact.total / exact.qty);
       } else {
         const smaller = _closingTiers.filter(t => t.qty <= qty).sort((a, b) => b.qty - a.qty);
-        if (smaller.length) pricePerUnit = smaller[0].price;
+        if (smaller.length) pricePerUnit = Math.round(smaller[0].total / smaller[0].qty);
       }
     }
     _closingSelValue = qty * pricePerUnit;

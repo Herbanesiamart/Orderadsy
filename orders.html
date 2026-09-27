@@ -202,17 +202,19 @@
     if (_dateTo)     f.push(`created_at=lte.${_dateTo.toISOString()}`);
 
     const filterStr = f.length ? f.join('&') + '&' : '';
-    const countQ = `?${filterStr}select=id`;
     const dataQ  = `?${filterStr}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,products(name,followup_welcome),cs_team(name,wa_number),checkout_pages(fields_config)`;
 
     try {
       document.getElementById('ordersTable').innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--gray-400);">Loading...</td></tr>`;
       const [orders, countRes] = await Promise.all([
         sbGet('orders', dataQ),
-        sbGet('orders', countQ)
+        fetch(`${SUPABASE_URL}/rest/v1/orders?${filterStr}select=id`, {
+          headers: { ...sbH, 'Prefer': 'count=exact', 'Range': '0-0' },
+        }),
       ]);
       allOrders = orders;
-      totalCount = countRes.length;
+      const cr = countRes.headers.get('Content-Range');
+      totalCount = parseInt(cr?.split('/')[1] || '0');
       renderOrders(orders);
       renderPagination();
 

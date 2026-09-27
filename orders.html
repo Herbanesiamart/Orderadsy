@@ -91,9 +91,15 @@
     <div class="modal-body">
       <div id="closingCustomerInfo" style="background:var(--gray-50);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;"></div>
       <div id="closingTiersWrap"></div>
-      <div class="form-group" style="margin-top:16px;">
-        <label class="form-label">Qty <span class="req">*</span></label>
-        <input type="number" class="form-control" id="closingQtyInput" min="1" placeholder="Jumlah pcs..." oninput="onClosingQtyInput()" style="text-align:center;font-size:18px;font-weight:700;">
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <div class="form-group" style="margin-bottom:0;flex:1;">
+          <label class="form-label">Qty <span class="req">*</span></label>
+          <input type="number" class="form-control" id="closingQtyInput" min="1" placeholder="pcs..." oninput="onClosingQtyInput()" style="text-align:center;font-size:18px;font-weight:700;">
+        </div>
+        <div class="form-group" style="margin-bottom:0;flex:2;" id="closingManualPriceWrap">
+          <label class="form-label">Harga Total (Rp) <span class="req">*</span></label>
+          <input type="number" class="form-control" id="closingManualPrice" min="0" placeholder="Total harga..." oninput="onClosingManualPrice()" style="font-size:15px;font-weight:700;">
+        </div>
       </div>
       <div id="closingValueDisplay" style="font-size:15px;font-weight:600;color:var(--gray-500);padding:10px 0 4px;"></div>
     </div>
@@ -652,6 +658,10 @@
       wrap.innerHTML = '';
     }
 
+    // Reset manual price
+    document.getElementById('closingManualPrice').value = '';
+    document.getElementById('closingManualPriceWrap').style.display = _closingTiers.length ? 'none' : '';
+
     document.getElementById('closingModal').classList.remove('hidden');
   }
 
@@ -660,6 +670,8 @@
     _closingSelQty   = t.qty;
     _closingSelValue = t.total;
     document.getElementById('closingQtyInput').value = t.qty;
+    document.getElementById('closingManualPrice').value = '';
+    document.getElementById('closingManualPriceWrap').style.display = 'none';
     document.getElementById('closingValueDisplay').innerHTML =
       `Total: <strong style="color:var(--primary);font-size:17px;">Rp ${_closingSelValue.toLocaleString('id-ID')}</strong>`;
     document.querySelectorAll('.tier-opt').forEach(b => b.classList.remove('selected'));
@@ -673,21 +685,24 @@
     // De-select tier buttons
     document.querySelectorAll('.tier-opt').forEach(b => b.classList.remove('selected'));
 
-    let pricePerUnit = _closingBasePrice;
-    if (_closingTiers.length) {
-      const exact = _closingTiers.find(t => t.qty === qty);
-      if (exact) {
-        pricePerUnit = Math.round(exact.total / exact.qty);
-      } else {
-        const smaller = _closingTiers.filter(t => t.qty <= qty).sort((a, b) => b.qty - a.qty);
-        if (smaller.length) pricePerUnit = Math.round(smaller[0].total / smaller[0].qty);
-      }
-    }
-    _closingSelValue = qty * pricePerUnit;
-
     if (qty > 0) {
+      // Tampilkan input harga manual (CS input sendiri)
+      document.getElementById('closingManualPriceWrap').style.display = '';
+      document.getElementById('closingManualPrice').value = '';
+      _closingSelValue = 0;
+      document.getElementById('closingValueDisplay').innerHTML = '';
+    } else {
+      document.getElementById('closingManualPriceWrap').style.display = _closingTiers.length ? 'none' : '';
+      document.getElementById('closingValueDisplay').innerHTML = '';
+    }
+  }
+
+  function onClosingManualPrice() {
+    const total = parseInt(document.getElementById('closingManualPrice').value) || 0;
+    _closingSelValue = total;
+    if (total > 0) {
       document.getElementById('closingValueDisplay').innerHTML =
-        `Total: <strong style="color:var(--primary);font-size:17px;">Rp ${_closingSelValue.toLocaleString('id-ID')}</strong>`;
+        `Total: <strong style="color:var(--primary);font-size:17px;">Rp ${total.toLocaleString('id-ID')}</strong>`;
     } else {
       document.getElementById('closingValueDisplay').innerHTML = '';
     }
@@ -705,6 +720,10 @@
   async function confirmClosing() {
     if (!_closingSelQty || _closingSelQty <= 0) {
       showToast('Isi qty closing terlebih dahulu', 'error');
+      return;
+    }
+    if (!_closingSelValue || _closingSelValue <= 0) {
+      showToast('Isi harga total terlebih dahulu', 'error');
       return;
     }
     const id    = _closingOrderId;

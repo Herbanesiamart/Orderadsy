@@ -229,8 +229,6 @@
       // Format omset singkat: 5.400.000 → 5.4jt, 900.000 → 900rb
       function fmtOmset(n) {
         if (!n) return '—';
-        if (n >= 1000000) return 'Rp ' + (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'jt';
-        if (n >= 1000)    return 'Rp ' + Math.round(n / 1000) + 'rb';
         return 'Rp ' + n.toLocaleString('id-ID');
       }
 
@@ -251,7 +249,7 @@
         const totalBelum    = allPOrders.filter(o => BELUM_SET.has(o.status)).length;
         const totalBotol    = allClosing.reduce((s, o) => s + (o.closing_qty || 0), 0);
         const totalOmset    = allClosing.reduce((s, o) => s + (o.closing_value || 0), 0);
-        const totalUpsell   = totalClosing > 0 && totalBotol > 0 ? (totalBotol / totalClosing).toFixed(2).replace(/\.?0+$/, '') : null;
+        const totalUpsell   = totalClosing > 0 && totalBotol > 0 ? (totalBotol / totalClosing).toFixed(2).replace('.', ',') : null;
         const totalCR       = totalLead > 0 ? Math.round(totalClosing / totalLead * 100) : 0;
         const totalColor    = crColor(totalCR);
 
@@ -271,7 +269,7 @@
           const belum     = csOrders.filter(o => BELUM_SET.has(o.status)).length;
           const botol     = csClosing.reduce((s, o) => s + (o.closing_qty || 0), 0);
           const omset     = csClosing.reduce((s, o) => s + (o.closing_value || 0), 0);
-          const upsell    = closing > 0 && botol > 0 ? (botol / closing).toFixed(2).replace(/\.?0+$/, '') : null;
+          const upsell    = closing > 0 && botol > 0 ? (botol / closing).toFixed(2).replace('.', ',') : null;
           const cr        = lead > 0 ? Math.round(closing / lead * 100) : 0;
           const color     = crColor(cr);
 
@@ -288,7 +286,7 @@
               </td>
               <td>${botol > 0 ? `<span style="font-weight:600;">${botol.toLocaleString('id-ID')}</span>` : '<span style="color:var(--gray-300);">—</span>'}</td>
               <td>${upsell
-                ? `<span style="font-weight:700;color:var(--primary);">${upsell}x</span>`
+                ? `<span style="font-weight:700;color:var(--primary);">${upsell}</span>`
                 : '<span style="color:var(--gray-300);">—</span>'
               }</td>
               <td>
@@ -316,7 +314,7 @@
               </div>
             </td>
             <td><span style="font-weight:700;">${totalBotol > 0 ? totalBotol.toLocaleString('id-ID') : '—'}</span></td>
-            <td><span style="font-weight:700;color:var(--primary);">${totalUpsell ? totalUpsell + 'x' : '—'}</span></td>
+            <td><span style="font-weight:700;color:var(--primary);">${totalUpsell ?? '—'}</span></td>
             <td><span style="font-weight:700;color:var(--green);" title="Rp ${totalOmset.toLocaleString('id-ID')}">${fmtOmset(totalOmset)}</span></td>
             <td><span style="color:var(--gray-500);font-size:12px;">${totalBelum.toLocaleString('id-ID')}</span></td>
           </tr>`;

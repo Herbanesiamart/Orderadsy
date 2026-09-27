@@ -81,6 +81,42 @@
   </div>
 </div>
 
+<!-- Closing Qty Modal -->
+<div class="modal-overlay hidden" id="closingModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title">✅ Konfirmasi Closing</div>
+      <button class="modal-close" onclick="closeClosingModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="closingCustomerInfo" style="background:var(--gray-50);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;"></div>
+      <div id="closingTiersWrap"></div>
+      <div class="form-group" style="margin-top:16px;">
+        <label class="form-label">Qty <span class="req">*</span></label>
+        <input type="number" class="form-control" id="closingQtyInput" min="1" placeholder="Jumlah pcs..." oninput="onClosingQtyInput()" style="text-align:center;font-size:18px;font-weight:700;">
+      </div>
+      <div id="closingValueDisplay" style="font-size:15px;font-weight:600;color:var(--gray-500);padding:10px 0 4px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeClosingModal()">Batal</button>
+      <button class="btn btn-primary" id="btnConfirmClosing" onclick="confirmClosing()">Konfirmasi Closing</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .tier-opt {
+    padding:12px 16px; border:2px solid var(--gray-200); border-radius:var(--radius);
+    background:var(--white); cursor:pointer; text-align:center; transition:all 0.15s;
+    flex:1; min-width:100px;
+  }
+  .tier-opt:hover { border-color:var(--primary-light); }
+  .tier-opt.selected { border-color:var(--primary); background:var(--primary-light,#EFF6FF); }
+  .tier-opt .tier-qty { font-weight:700; font-size:17px; margin-bottom:2px; }
+  .tier-opt .tier-ppu { font-size:11px; color:var(--gray-500); }
+  .tier-opt .tier-total { font-size:13px; font-weight:700; color:var(--primary); margin-top:4px; }
+</style>
+
 <script src="js/config.js"></script>
 <script src="js/navbar.js"></script>
 <script src="js/date-filter.js"></script>
@@ -331,7 +367,18 @@
 
   function renderKetCell(id, status, pending = false) {
     const isBelum = BELUM_CLOSING.has(status);
-    if (!isBelum && !pending) return `<div id="ket-cell-${id}" style="color:var(--gray-300);font-size:13px;">—</div>`;
+    if (!isBelum && !pending) {
+      if (status === 'closing') {
+        const o = allOrders.find(o => o.id === id);
+        if (o && o.closing_qty) {
+          return `<div id="ket-cell-${id}">
+            <div style="font-size:13px;font-weight:700;color:var(--green);">${o.closing_qty} pcs</div>
+            <div style="font-size:11px;color:var(--gray-500);">Rp ${Number(o.closing_value || 0).toLocaleString('id-ID')}</div>
+          </div>`;
+        }
+      }
+      return `<div id="ket-cell-${id}" style="color:var(--gray-300);font-size:13px;">—</div>`;
+    }
     return `<div id="ket-cell-${id}">
       <select class="form-control" style="width:130px;padding:4px 8px;font-size:12px;" onchange="updateStatus('${id}',this.value)">
         ${pending ? `<option value="" disabled selected>Pilih Keterangan</option>` : ''}
@@ -351,18 +398,26 @@
       // Tampilkan sub-dropdown dengan "Pilih Keterangan", belum save ke DB
       const ketCell = document.getElementById('ket-cell-' + id);
       if (ketCell) ketCell.outerHTML = renderKetCell(id, '', true);
+    } else if (val === 'closing') {
+      openClosingModal(id);
     } else {
       updateStatus(id, val);
     }
   }
 
-  async function updateStatus(id, status) {
+  async function updateStatus(id, status, closingQty = null, closingValue = null) {
     try {
-      await sbPatch('orders', `?id=eq.${id}`, { status });
+      const patch = { status };
+      if (status === 'closing' && closingQty) {
+        patch.closing_qty   = closingQty;
+        patch.closing_value = closingValue || 0;
+      }
+      await sbPatch('orders', `?id=eq.${id}`, patch);
       showToast('Status diperbarui', 'success');
       const o = allOrders.find(o => o.id === id);
       if (o) {
         o.status = status;
+        if (closingQty) { o.closing_qty = closingQty; o.closing_value = closingValue; }
         // Re-render status + keterangan cell in place
         const cell = document.getElementById('status-cell-' + id);
         if (cell) cell.outerHTML = renderStatusCell(id, status);
@@ -373,6 +428,7 @@
       // Kirim Purchase event saat status → closing
       const _o = allOrders.find(o => o.id === id);
       if (status === 'closing' && _o && _o.product_id) {
+        const trackValue = closingValue || 0;
         try {
           const products = await sbGet('products', `?id=eq.${_o.product_id}&select=pixel_id,access_token,tiktok_pixel_id,tiktok_access_token,price,name`);
           const product = products[0];
@@ -397,7 +453,7 @@
                 custom_data: {
                   product_name: product.name,
                   order_id:     id,
-                  value:        product.price || 0,
+                  value:        trackValue || product.price || 0,
                   currency:     'IDR',
                 },
               }),
@@ -415,7 +471,7 @@
                 event_name:   'Purchase',
                 event_id:     'closing_tt_' + id,
                 user_data:    { ph: _o.customer_wa || '', em: _o.customer_email || null },
-                custom_data:  { product_id: _o.product_id, product_name: product.name, value: product.price || 0, currency: 'IDR', order_id: id },
+                custom_data:  { product_id: _o.product_id, product_name: product.name, value: trackValue || product.price || 0, currency: 'IDR', order_id: id },
               }),
             }).catch(e => console.warn('TikTok Events Purchase gagal:', e.message));
           }
@@ -491,6 +547,16 @@
           <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">Waktu Order</div>
           <div style="font-size:14px;">${new Date(o.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}</div>
         </div>
+        ${o.closing_qty ? `<div style="background:var(--green-light,#F0FDF4);border:1px solid #86EFAC;border-radius:var(--radius-sm);padding:10px 14px;display:flex;gap:20px;">
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">Closing Qty</div>
+            <div style="font-size:15px;font-weight:700;color:var(--green);">${o.closing_qty} pcs</div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:2px;">Nilai Closing</div>
+            <div style="font-size:15px;font-weight:700;color:var(--green);">Rp ${Number(o.closing_value || 0).toLocaleString('id-ID')}</div>
+          </div>
+        </div>` : ''}
       </div>`;
     document.getElementById('detailModal').classList.remove('hidden');
   }
@@ -532,6 +598,121 @@
         openDetail(id);
       }
     } catch(e) {}
+  }
+
+  // ── Closing Modal ──
+  let _closingOrderId   = null;
+  let _closingPrevStatus = 'pending';
+  let _closingTiers     = [];
+  let _closingBasePrice = 0;
+  let _closingSelQty    = 0;
+  let _closingSelValue  = 0;
+
+  async function openClosingModal(orderId) {
+    _closingOrderId  = orderId;
+    _closingSelQty   = 0;
+    _closingSelValue = 0;
+    const o = allOrders.find(o => o.id === orderId);
+    _closingPrevStatus = o?.status || 'pending';
+
+    // Customer info
+    document.getElementById('closingCustomerInfo').innerHTML = `
+      <div style="font-size:13px;font-weight:700;">${o?.customer_name || '-'}</div>
+      <div style="font-size:12px;color:var(--gray-500);margin-top:2px;">${o?.products?.name || ''}</div>`;
+
+    // Reset fields
+    document.getElementById('closingQtyInput').value = '';
+    document.getElementById('closingValueDisplay').innerHTML = '';
+
+    try {
+      const products = await sbGet('products', `?id=eq.${o?.product_id}&select=name,price,price_tiers`);
+      const p = products[0] || {};
+      _closingTiers     = Array.isArray(p.price_tiers) ? p.price_tiers : [];
+      _closingBasePrice = p.price || 0;
+    } catch(e) {
+      _closingTiers     = [];
+      _closingBasePrice = 0;
+    }
+
+    // Render tiers
+    const wrap = document.getElementById('closingTiersWrap');
+    if (_closingTiers.length) {
+      wrap.innerHTML = `
+        <div style="font-size:12px;font-weight:600;color:var(--gray-400);text-transform:uppercase;margin-bottom:8px;">Pilih Paket</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          ${_closingTiers.map((t, i) => `
+            <button class="tier-opt" id="tierOpt-${i}" onclick="selectClosingTier(${i})">
+              <div class="tier-qty">${t.qty} pcs</div>
+              <div class="tier-ppu">Rp ${Number(t.price).toLocaleString('id-ID')}/pcs</div>
+              <div class="tier-total">Rp ${(t.qty * t.price).toLocaleString('id-ID')}</div>
+            </button>`).join('')}
+        </div>
+        <div style="font-size:12px;color:var(--gray-400);margin:12px 0 0;text-align:center;">— atau ketik qty manual —</div>`;
+    } else {
+      wrap.innerHTML = '';
+    }
+
+    document.getElementById('closingModal').classList.remove('hidden');
+  }
+
+  function selectClosingTier(i) {
+    const t = _closingTiers[i];
+    _closingSelQty   = t.qty;
+    _closingSelValue = t.qty * t.price;
+    document.getElementById('closingQtyInput').value = t.qty;
+    document.getElementById('closingValueDisplay').innerHTML =
+      `Total: <strong style="color:var(--primary);font-size:17px;">Rp ${_closingSelValue.toLocaleString('id-ID')}</strong>`;
+    document.querySelectorAll('.tier-opt').forEach(b => b.classList.remove('selected'));
+    const btn = document.getElementById('tierOpt-' + i);
+    if (btn) btn.classList.add('selected');
+  }
+
+  function onClosingQtyInput() {
+    const qty = parseInt(document.getElementById('closingQtyInput').value) || 0;
+    _closingSelQty = qty;
+    // De-select tier buttons
+    document.querySelectorAll('.tier-opt').forEach(b => b.classList.remove('selected'));
+
+    let pricePerUnit = _closingBasePrice;
+    if (_closingTiers.length) {
+      const exact = _closingTiers.find(t => t.qty === qty);
+      if (exact) {
+        pricePerUnit = exact.price;
+      } else {
+        const smaller = _closingTiers.filter(t => t.qty <= qty).sort((a, b) => b.qty - a.qty);
+        if (smaller.length) pricePerUnit = smaller[0].price;
+      }
+    }
+    _closingSelValue = qty * pricePerUnit;
+
+    if (qty > 0) {
+      document.getElementById('closingValueDisplay').innerHTML =
+        `Total: <strong style="color:var(--primary);font-size:17px;">Rp ${_closingSelValue.toLocaleString('id-ID')}</strong>`;
+    } else {
+      document.getElementById('closingValueDisplay').innerHTML = '';
+    }
+  }
+
+  function closeClosingModal() {
+    document.getElementById('closingModal').classList.add('hidden');
+    if (_closingOrderId) {
+      const cell = document.getElementById('status-cell-' + _closingOrderId);
+      if (cell) cell.outerHTML = renderStatusCell(_closingOrderId, _closingPrevStatus);
+    }
+    _closingOrderId = null;
+  }
+
+  async function confirmClosing() {
+    if (!_closingSelQty || _closingSelQty <= 0) {
+      showToast('Isi qty closing terlebih dahulu', 'error');
+      return;
+    }
+    const id    = _closingOrderId;
+    const qty   = _closingSelQty;
+    const value = _closingSelValue;
+    document.getElementById('closingModal').classList.add('hidden');
+    _closingOrderId = null;
+    await updateStatus(id, 'closing', qty, value);
   }
 
   // Initial load is triggered by DateFilter's default (Last 30 Days) callback

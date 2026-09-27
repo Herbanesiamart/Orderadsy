@@ -61,6 +61,7 @@
     <button class="detail-tab active" onclick="showTab('stats',this)">📊 Statistik</button>
     <button class="detail-tab" onclick="showTab('followup',this)">💬 Follow-up Text</button>
     <button class="detail-tab" onclick="showTab('assignation',this)">👥 Assignation CS</button>
+    <button class="detail-tab" onclick="showTab('harga',this)">💰 Harga</button>
     <button class="detail-tab" onclick="showTab('pixel',this)">📡 Pixel, CAPI & GTM</button>
   </div>
 
@@ -218,6 +219,34 @@
       <div id="assignCS" style="max-height:320px;overflow-y:auto;padding-right:4px;"></div>
       <hr class="divider">
       <button class="btn btn-primary" onclick="saveAssignation()">Simpan Perubahan</button>
+    </div>
+  </div>
+
+  <!-- Tab: Harga -->
+  <div id="tab-harga" style="display:none;">
+    <div class="card card-body">
+      <div class="section-title mb-4">💰 Paket Harga</div>
+      <div class="form-hint mb-16">Buat paket berdasarkan jumlah pembelian. CS akan memilih paket ini saat konfirmasi closing untuk mencatat qty dan nilai transaksi.</div>
+
+      <!-- Existing tiers -->
+      <div id="priceTiersList"></div>
+
+      <hr class="divider">
+
+      <!-- Add tier form -->
+      <div style="font-size:13px;font-weight:600;color:var(--gray-600);margin-bottom:12px;">➕ Tambah Paket</div>
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+        <div class="form-group" style="margin-bottom:0;flex:1;min-width:120px;">
+          <label class="form-label">Qty (pcs) <span class="req">*</span></label>
+          <input type="number" class="form-control" id="tierQtyInput" min="1" placeholder="cth: 3" style="text-align:center;">
+        </div>
+        <div class="form-group" style="margin-bottom:0;flex:2;min-width:180px;">
+          <label class="form-label">Harga per pcs (Rp) <span class="req">*</span></label>
+          <input type="number" class="form-control" id="tierPriceInput" min="0" placeholder="cth: 300000">
+        </div>
+        <button class="btn btn-primary" style="white-space:nowrap;" onclick="addPriceTier()">+ Tambah</button>
+      </div>
+      <div id="tierPreview" style="margin-top:10px;font-size:13px;color:var(--primary);font-weight:500;display:none;"></div>
     </div>
   </div>
 
@@ -396,9 +425,12 @@
   }
 
   async function loadStats() {
-    const orders = await sbGet('orders', `?product_id=eq.${productId}&select=status`).catch(() => []);
-    const total   = orders.length;
-    const closing = orders.filter(o => o.status === 'closing').length;
+    const [totalRes, closingRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/orders?product_id=eq.${productId}&select=id`, { headers: { ...getSupabaseHeaders(), 'Prefer': 'count=exact', 'Range': '0-0' } }),
+      fetch(`${SUPABASE_URL}/rest/v1/orders?product_id=eq.${productId}&status=eq.closing&select=id`, { headers: { ...getSupabaseHeaders(), 'Prefer': 'count=exact', 'Range': '0-0' } }),
+    ]).catch(() => [null, null]);
+    const total   = parseInt(totalRes?.headers?.get('Content-Range')?.split('/')[1] || '0');
+    const closing = parseInt(closingRes?.headers?.get('Content-Range')?.split('/')[1] || '0');
     document.getElementById('fViews').textContent   = total; // simplified
     document.getElementById('fOrders').textContent  = total;
     document.getElementById('fClosing').textContent = closing;
@@ -409,7 +441,7 @@
   async function loadCheckoutPages() {
     const pages = await sbGet('checkout_pages', `?product_id=eq.${productId}&order=created_at.asc`).catch(() => []);
     checkoutPages = pages;
-    const orders = await sbGet('orders', `?product_id=eq.${productId}&select=checkout_page_id,status`).catch(() => []);
+    const orders = await sbGetAll('orders', `?product_id=eq.${productId}&select=checkout_page_id,status`).catch(() => []);
 
     const tbody = document.getElementById('checkoutTable');
     if (!pages.length) {
@@ -500,14 +532,104 @@
     } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
   }
 
+  // ── Price Tiers ──
+  function renderPriceTiersUI() {
+    const tiers = (product && product.price_tiers) ? product.price_tiers : [];
+    const container = document.getElementById('priceTiersList');
+    if (!container) return;
+    if (!tiers.length) {
+      container.innerHTML = `<div style="color:var(--gray-400);font-size:13px;text-align:center;padding:20px 0;border:2px dashed var(--gray-200);border-radius:var(--radius);">Belum ada paket harga. Tambahkan di bawah.</div>`;
+      return;
+    }
+    container.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;border-bottom:1px solid var(--gray-200);">QTY</th>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;border-bottom:1px solid var(--gray-200);">HARGA / PCS</th>
+            <th style="text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--gray-400);text-transform:uppercase;border-bottom:1px solid var(--gray-200);">TOTAL</th>
+            <th style="border-bottom:1px solid var(--gray-200);"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tiers.map((t, i) => `
+            <tr style="border-bottom:1px solid var(--gray-100);">
+              <td style="padding:12px;font-size:15px;font-weight:700;">${t.qty} pcs</td>
+              <td style="padding:12px;font-size:14px;">Rp ${Number(t.price).toLocaleString('id-ID')}</td>
+              <td style="padding:12px;font-size:14px;font-weight:700;color:var(--primary);">Rp ${(t.qty * t.price).toLocaleString('id-ID')}</td>
+              <td style="padding:12px;">
+                <button onclick="removePriceTier(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;padding:0;">🗑 Hapus</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  // Live preview total when typing tier
+  document.addEventListener('DOMContentLoaded', () => {
+    const qInput = document.getElementById('tierQtyInput');
+    const pInput = document.getElementById('tierPriceInput');
+    const preview = document.getElementById('tierPreview');
+    function updatePreview() {
+      const q = parseInt(qInput?.value) || 0;
+      const p = parseInt(pInput?.value) || 0;
+      if (q > 0 && p > 0) {
+        preview.style.display = '';
+        preview.textContent = `→ Total: Rp ${(q * p).toLocaleString('id-ID')}`;
+      } else {
+        preview.style.display = 'none';
+      }
+    }
+    qInput?.addEventListener('input', updatePreview);
+    pInput?.addEventListener('input', updatePreview);
+  });
+
+  async function addPriceTier() {
+    const qty   = parseInt(document.getElementById('tierQtyInput').value);
+    const price = parseInt(document.getElementById('tierPriceInput').value);
+    if (!qty  || qty <= 0)   { showToast('Isi qty terlebih dahulu', 'error'); return; }
+    if (!price || price <= 0) { showToast('Isi harga terlebih dahulu', 'error'); return; }
+
+    const tiers = [...(product.price_tiers || [])];
+    if (tiers.find(t => t.qty === qty)) { showToast(`Paket ${qty} pcs sudah ada`, 'error'); return; }
+
+    tiers.push({ qty, price });
+    tiers.sort((a, b) => a.qty - b.qty);
+    await savePriceTiersDB(tiers);
+
+    document.getElementById('tierQtyInput').value = '';
+    document.getElementById('tierPriceInput').value = '';
+    document.getElementById('tierPreview').style.display = 'none';
+  }
+
+  async function removePriceTier(index) {
+    if (!confirm('Hapus paket ini?')) return;
+    const tiers = [...(product.price_tiers || [])];
+    tiers.splice(index, 1);
+    await savePriceTiersDB(tiers);
+  }
+
+  async function savePriceTiersDB(tiers) {
+    try {
+      await sbPatch('products', `?id=eq.${productId}`, { price_tiers: tiers });
+      product.price_tiers = tiers;
+      renderPriceTiersUI();
+      showToast('Paket harga disimpan', 'success');
+    } catch(e) {
+      showToast('Gagal simpan: ' + e.message, 'error');
+    }
+  }
+
   // ── Tab switching ──
   function showTab(tab, el) {
-    ['stats','followup','assignation','pixel'].forEach(t => {
+    ['stats','followup','assignation','harga','pixel'].forEach(t => {
       document.getElementById('tab-'+t).style.display = t === tab ? '' : 'none';
     });
     document.querySelectorAll('.detail-tab').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
     if (tab === 'assignation') loadAssignCS();
+    if (tab === 'harga') renderPriceTiersUI();
   }
 
   function setFollowupTab(tab, el) {

@@ -474,6 +474,8 @@
     btn.disabled = true;
 
     try {
+      const eventId = genEventId();
+
       // 1 API call — semua proses di server
       const res = await fetch(`${API_URL}/submit-order`, {
         method: 'POST',
@@ -488,7 +490,7 @@
           customer_city:    getFieldVal('kota')    || null,
           customer_note:    getFieldVal('catatan') || null,
           customer_keluhan: getFieldVal('keluhan') || null,
-          event_id:         genEventId(),
+          event_id:         eventId,
           event_source_url: window.location.href,
           fbc:              getFbc(),
           fbp:              getFbp(),
@@ -518,7 +520,7 @@
       if (window.fbq && data.pixel_id) {
         fbq('track', data.pixel_event || 'Lead',
           { value: data.product_price, currency: 'IDR' },
-          { eventID: data.order_id });
+          { eventID: eventId });
       }
 
       // TikTok browser pixel (harus client-side)

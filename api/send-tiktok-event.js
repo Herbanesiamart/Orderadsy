@@ -36,29 +36,32 @@ module.exports = async function handler(req, res) {
   const phone = user_data.ph ? user_data.ph.replace(/\D/g, '') : null;
 
   const payload = {
-    pixel_code,
-    event:      event_name,
-    event_time: Math.floor(Date.now() / 1000),
-    event_id:   event_id || Date.now().toString(36),
-    user: {
-      ...(phone            ? { phone_numbers: [sha256(phone)] } : {}),
-      ...(user_data.em     ? { emails:        [sha256(user_data.em)] } : {}),
-    },
-    properties: {
-      value:    custom_data.value    || 0,
-      currency: custom_data.currency || 'IDR',
-      order_id: custom_data.order_id || undefined,
-      num_items: 1,
-      contents: [{
-        content_id:   String(custom_data.product_id || ''),
-        content_name: custom_data.product_name || '',
-        quantity:     1,
-        price:        custom_data.value || 0,
-      }],
-    },
-    page: {
-      url: event_source_url || '',
-    },
+    event_source:    'web',
+    event_source_id: pixel_code,
+    data: [{
+      event:      event_name,
+      event_time: Math.floor(Date.now() / 1000),
+      event_id:   event_id || Date.now().toString(36),
+      user: {
+        ...(phone        ? { phone_numbers: [sha256(phone)] } : {}),
+        ...(user_data.em ? { emails:        [sha256(user_data.em)] } : {}),
+      },
+      properties: {
+        value:    custom_data.value    || 0,
+        currency: custom_data.currency || 'IDR',
+        order_id: custom_data.order_id || undefined,
+        num_items: 1,
+        contents: [{
+          content_id:   String(custom_data.product_id || ''),
+          content_name: custom_data.product_name || '',
+          quantity:     1,
+          price:        custom_data.value || 0,
+        }],
+      },
+      page: {
+        url: event_source_url || '',
+      },
+    }],
   };
 
   try {

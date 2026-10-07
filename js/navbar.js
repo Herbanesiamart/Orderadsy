@@ -5,37 +5,23 @@ function renderNavbar(activePage) {
   const admin = isAdmin();
   const csName = getCSName();
 
-  const navLinks = `
-    <a href="dashboard.html" class="nav-link ${activePage==='dashboard'?'active':''}">Dashboard</a>
-    ${admin ? `<a href="products.html" class="nav-link ${activePage==='products'?'active':''}">Products</a>` : ''}
-    <a href="orders.html" class="nav-link ${activePage==='orders'?'active':''}">Orders</a>
-    ${admin ? `<a href="cs-performance.html" class="nav-link ${activePage==='cs-performance'?'active':''}">Performance</a>` : ''}
-    <div class="nav-dropdown" id="navDropdown">
-      <button class="nav-link ${activePage==='others'?'active':''}" onclick="toggleNavDropdown(event)">Others ▾</button>
-      <div class="nav-dropdown-menu">
-        ${admin ? `<a href="others-cs.html" class="nav-dropdown-item">👥 CS Team</a>` : ''}
-        <a href="others-blocked-wa.html" class="nav-dropdown-item">🚫 Blokir WA</a>
-        <a href="others-abandoned.html" class="nav-dropdown-item">🛒 Abandoned Cart</a>
-      </div>
-    </div>`;
-
-  // Menu khusus hamburger mobile (Performance + Others items)
-  const mobileMenuLinks = `
-    ${admin ? `<a href="cs-performance.html" class="nav-link ${activePage==='cs-performance'?'active':''}">📊 Performance</a>` : ''}
-    ${admin ? `<a href="others-cs.html" class="nav-link ${activePage==='others'?'active':''}">👥 CS Team</a>` : ''}
-    <a href="others-blocked-wa.html" class="nav-link">🚫 Blokir WA</a>
-    <a href="others-abandoned.html" class="nav-link">🛒 Abandoned Cart</a>`;
-
   nav.innerHTML = `
     <a href="dashboard.html" class="navbar-brand">
       <img src="img/logo-adsy.png" alt="Adsy" style="width:28px;height:28px;object-fit:contain;">
       Order<span>Adsy</span>
     </a>
-    <nav class="navbar-nav">${navLinks}</nav>
-    <nav class="navbar-nav-mobile">
+    <nav class="navbar-nav">
       <a href="dashboard.html" class="nav-link ${activePage==='dashboard'?'active':''}">Dashboard</a>
       ${admin ? `<a href="products.html" class="nav-link ${activePage==='products'?'active':''}">Products</a>` : ''}
       <a href="orders.html" class="nav-link ${activePage==='orders'?'active':''}">Orders</a>
+      <div class="nav-dropdown" id="navDropdown">
+        <button class="nav-link ${activePage==='others'?'active':''}" onclick="toggleNavDropdown(event)">Others ▾</button>
+        <div class="nav-dropdown-menu">
+          ${admin ? `<a href="others-cs.html" class="nav-dropdown-item">👥 CS Team</a>` : ''}
+          <a href="others-blocked-wa.html" class="nav-dropdown-item">🚫 Blokir WA</a>
+          <a href="others-abandoned.html" class="nav-dropdown-item">🛒 Abandoned Cart</a>
+        </div>
+      </div>
     </nav>
     <div class="navbar-right">
       ${admin ? `<a href="products-add.html" class="btn-add-product">＋ Add Product</a>` : `<span style="font-size:13px;color:var(--gray-500);font-weight:500;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${csName || 'CS'}</span>`}
@@ -55,37 +41,11 @@ function renderNavbar(activePage) {
         </div>
       </div>
       <button class="icon-btn" title="Logout" onclick="logout()">⏻</button>
-      <button class="hamburger-btn" onclick="toggleMobileMenu()" id="hamburgerBtn" title="Menu">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
     </div>
   `;
 
-  // Mobile menu drawer (inject setelah navbar)
-  let mobileMenu = document.getElementById('mobileMenu');
-  if (!mobileMenu) {
-    mobileMenu = document.createElement('div');
-    mobileMenu.id = 'mobileMenu';
-    mobileMenu.className = 'mobile-menu';
-    nav.parentNode.insertBefore(mobileMenu, nav.nextSibling);
-  }
-  mobileMenu.innerHTML = mobileMenuLinks;
-
-  // Tutup mobile menu saat klik di luar
-  document.addEventListener('click', (e) => {
-    const menu = document.getElementById('mobileMenu');
-    const btn  = document.getElementById('hamburgerBtn');
-    if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
-      menu.classList.remove('open');
-    }
-  }, { once: false });
-
+  // Init notifications after rendering
   initNotifications();
-}
-
-function toggleMobileMenu() {
-  const menu = document.getElementById('mobileMenu');
-  if (menu) menu.classList.toggle('open');
 }
 
 function toggleNavDropdown(e) {

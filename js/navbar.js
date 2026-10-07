@@ -244,7 +244,7 @@ function initNotifications() {
 
   // Fallback polling 60 detik
   if (_notifInterval) clearInterval(_notifInterval);
-  _notifInterval = setInterval(fetchNotifications, 60000);
+  _notifInterval = setInterval(fetchNotifications, 300000);
 
   // prevent notif panel clicks from closing
   const panel = document.getElementById('notifWrapper');
@@ -316,15 +316,20 @@ function _subscribeNotifRealtime() {
             if (rows && rows[0]) {
               showOrderToast(rows[0]);
               showBrowserNotif(rows[0]);
+              // Inject langsung ke notif list — tidak perlu query ulang 30 hari
+              _notifData.unshift({ id: rows[0].id, customer_name: rows[0].customer_name, created_at: payload.new.created_at, product_id: rows[0].product_id, products: rows[0].products });
+              renderNotifList();
+              updateNotifBadge();
             }
           } catch(e) {
             // fallback: tampilkan dengan data minimal dari payload
             const fallback = { id: payload.new.id, customer_name: payload.new.customer_name, products: { name: '-' } };
             showOrderToast(fallback);
             showBrowserNotif(fallback);
+            _notifData.unshift({ id: payload.new.id, customer_name: payload.new.customer_name, created_at: payload.new.created_at, products: { name: '-' } });
+            renderNotifList();
+            updateNotifBadge();
           }
-
-          fetchNotifications();
 
           // Broadcast ke halaman aktif (dashboard/orders) supaya tidak perlu channel sendiri
           window.dispatchEvent(new CustomEvent('orderadsy:new-order', { detail: payload.new }));

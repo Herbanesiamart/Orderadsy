@@ -362,8 +362,9 @@
   }
 
   /* ── Abandoned Cart Tracking ── */
-  let _abandonSession = null;
-  let _abandonTimer   = null;
+  let _abandonSession   = null;
+  let _abandonTimer     = null;
+  let _orderSubmitted   = false;
 
   function initAbandonedTracking() {
     const storageKey = `oa_abandon_${pageIdParam || 'x'}`;
@@ -388,6 +389,7 @@
   }
 
   function trySaveOnExit() {
+    if (_orderSubmitted) return; // sudah order, jangan re-save
     const waRaw = getFieldVal('wa');
     if (waRaw.replace(/\D/g, '').length >= 8) {
       clearTimeout(_abandonTimer);
@@ -513,7 +515,8 @@
       // Diam-diam diblokir — jangan redirect
       if (data.blocked) { btn.disabled = false; return; }
 
-      // Hapus dari abandoned cart
+      // Hapus dari abandoned cart (flag dulu biar trySaveOnExit tidak re-insert)
+      _orderSubmitted = true;
       deleteAbandoned();
 
       // GTM dataLayer (harus client-side)

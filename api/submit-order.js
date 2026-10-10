@@ -75,7 +75,7 @@ module.exports = async function handler(req, res) {
     customer_name, customer_wa: rawWA,
     customer_email, customer_address, customer_city,
     customer_note, customer_keluhan,
-    event_id, event_source_url, fbc, fbp,
+    event_id, tiktok_event_id, event_source_url, fbc, fbp,
   } = req.body || {};
 
   if (!product_id || !checkout_page_id) {
@@ -169,16 +169,16 @@ module.exports = async function handler(req, res) {
       ? `https://wa.me/${normalizeWA(cs.wa_number)}?text=${encodeURIComponent(redirectMsg)}`
       : null;
 
-    // ── 7. Background tasks (fire & forget) ───────────────────────────
+    // ── 7. Background tasks ───────────────────────────────────────────
 
-    // Update rotator
+    // Update rotator (fire & forget — tidak kritis)
     if (assignedCS.length > 1) {
       sbPatch('cs_rotator', `?product_id=eq.${product_id}`,
         { last_cs_index: (rotatorIndex + 1) % assignedCS.length }
       ).catch(() => {});
     }
 
-    // WA notif ke CS via Fonnte
+    // WA notif ke CS via Fonnte — di-await agar tidak di-kill Vercel sebelum terkirim
     if (cs?.wa_number && FONNTE_TOKEN) {
       const waMessage = fillTemplate(
         product.followup_welcome ||
@@ -198,14 +198,20 @@ Halo ${cs.name || 'CS'}, ada order baru untuk kamu handle.
 Balas customer:
 https://wa.me/${customer_wa}?text=${encodeURIComponent(waMessage)}`;
 
-      fetch('https://api.fonnte.com/send', {
-        method: 'POST',
-        headers: { 'Authorization': FONNTE_TOKEN, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target: cs.wa_number, message: notifMsg }),
-      }).catch(() => {});
+      try {
+        const r = await fetch('https://api.fonnte.com/send', {
+          method: 'POST',
+          headers: { 'Authorization': FONNTE_TOKEN, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target: cs.wa_number, message: notifMsg }),
+        });
+        const d = await r.json();
+        if (!d.status) console.error('[WA Notif] Fonnte error:', JSON.stringify(d));
+      } catch(e) {
+        console.error('[WA Notif] Exception:', e.message);
+      }
     }
 
-    // Email notif ke CS (backup)
+    // Email notif ke CS (backup, fire & forget)
     if (cs?.email) {
       const waMessageEmail = fillTemplate(
         product.followup_welcome ||
@@ -256,16 +262,16 @@ https://wa.me/${customer_wa}?text=${encodeURIComponent(waMessage)}`;
       }).catch(() => {});
     }
 
-    // TikTok Events API
+    // TikTok Events API — PlaceAnOrder = Lead (Purchase dikirim saat CS closing di orders.html)
     if (product.tiktok_pixel_id && product.tiktok_access_token) {
+      const ttBaseId = tiktok_event_id || ('tt_' + (event_id || orderId));
       fetch(`${API_BASE}/send-tiktok-event`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           pixel_code:   product.tiktok_pixel_id,
           access_token: product.tiktok_access_token,
           event_name:   'PlaceAnOrder',
-          event_id:     event_id || ('place_' + orderId),
+          event_id:     ttBaseId,
           user_data:    { ph: customer_wa, em: customer_email || null },
           custom_data:  { product_id, product_name: product.name, value: product.price || 0, currency: 'IDR', order_id: orderId },
           event_source_url: event_source_url || '',

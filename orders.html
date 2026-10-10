@@ -238,7 +238,7 @@
     if (_dateTo)     f.push(`created_at=lte.${_dateTo.toISOString()}`);
 
     const filterStr = f.length ? f.join('&') + '&' : '';
-    const dataQ  = `?${filterStr}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=*,is_duplicate,products(name,followup_welcome),cs_team(name,wa_number),checkout_pages(fields_config)`;
+    const dataQ  = `?${filterStr}order=created_at.desc&limit=${PAGE_SIZE}&offset=${offset}&select=id,customer_name,customer_wa,customer_email,customer_address,customer_city,customer_note,customer_keluhan,status,created_at,fu_count,last_fu_at,closing_qty,closing_value,is_duplicate,product_id,cs_id,products(name,followup_welcome),cs_team(name,wa_number)`;
 
     try {
       // Hanya tampilkan "Loading..." kalau tabel masih kosong (pertama kali load)

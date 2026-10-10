@@ -507,7 +507,7 @@
       const dateF = _currentFrom && _currentTo
         ? `&created_at=gte.${_currentFrom.toISOString()}&created_at=lte.${_currentTo.toISOString()}`
         : '';
-      const orders = await sbGet('orders', `?status=eq.${status}${dateF}${csFilter}${productFilter}&select=id,customer_name,customer_wa,customer_address,customer_city,created_at,fu_count,last_fu_at,products(name,followup_templates),cs_team(name)&order=created_at.desc`);
+      const orders = await sbGet('orders', `?status=eq.${status}${dateF}${csFilter}${productFilter}&select=id,customer_name,customer_wa,customer_address,customer_city,created_at,fu_count,last_fu_at,products(name,followup_templates),cs_team(name)&order=created_at.desc&limit=200`);
 
       if (!orders.length) {
         body.innerHTML = `<div style="padding:24px;text-align:center;color:var(--gray-400);">Tidak ada order dengan status ini</div>`;

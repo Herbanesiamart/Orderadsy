@@ -40,6 +40,12 @@
   .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
   .filter-bar select, .filter-bar input { height: 36px; font-size: 13px; }
   .count-info { font-size: 13px; color: var(--gray-400); margin-left: auto; }
+  .pagination { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 20px; flex-wrap: wrap; }
+  .pagination button { height: 34px; min-width: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--gray-200); background: var(--white); color: var(--gray-700); font-size: 13px; cursor: pointer; }
+  .pagination button:hover:not(:disabled) { background: var(--gray-100); }
+  .pagination button.active { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 600; }
+  .pagination button:disabled { opacity: 0.4; cursor: default; }
+  .pagination .pg-info { font-size: 13px; color: var(--gray-400); padding: 0 6px; }
 </style>
 </head>
 <body>
@@ -52,16 +58,17 @@
   </div>
 
   <div class="filter-bar">
-    <select class="form-control" id="filterProduct" onchange="loadAbandoned()" style="width:auto;min-width:160px;">
+    <select class="form-control" id="filterProduct" onchange="currentPage=1;loadAbandoned()" style="width:auto;min-width:160px;">
       <option value="">Semua Produk</option>
     </select>
-    <input type="text" class="form-control" id="filterSearch" placeholder="Cari nama / WA..." oninput="renderList()" style="width:200px;">
+    <input type="text" class="form-control" id="filterSearch" placeholder="Cari nama / WA..." oninput="currentPage=1;renderList()" style="width:200px;">
     <span class="count-info" id="countInfo"></span>
   </div>
 
   <div class="ab-list" id="abList">
     <div style="text-align:center;padding:40px;color:var(--gray-400);">Loading...</div>
   </div>
+  <div class="pagination" id="pagination"></div>
 </div>
 
 <script src="js/config.js"></script>
@@ -70,8 +77,10 @@
   requireAuth();
   renderNavbar('others');
 
-  let abData     = [];
-  let productMap = {};
+  let abData       = [];
+  let productMap   = {};
+  let currentPage  = 1;
+  const PAGE_SIZE  = 25;
 
   let csProductIds = []; // produk yang dipegang CS, kosong = admin (lihat semua)
 
@@ -118,7 +127,7 @@
       }
 
       const q = `?order=last_activity_at.desc${productFilter}`;
-      abData = await sbGet('abandoned_carts', q);
+      abData = await sbGetAll('abandoned_carts', q);
       renderList();
     } catch(e) {
       document.getElementById('abList').innerHTML = `<div style="color:var(--red);padding:20px;">Gagal load: ${e.message}</div>`;
@@ -132,14 +141,22 @@
       ? abData.filter(a => (a.customer_name||'').toLowerCase().includes(q) || (a.customer_wa||'').includes(q))
       : abData;
 
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = 1;
+    const start   = (currentPage - 1) * PAGE_SIZE;
+    const paged   = filtered.slice(start, start + PAGE_SIZE);
+
     document.getElementById('countInfo').textContent = `${filtered.length} data`;
 
     if (!filtered.length) {
       el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🛒</div><div class="empty-state-text">${q ? 'Tidak ditemukan' : 'Belum ada abandoned cart'}</div></div>`;
+      renderPagination(0, 1);
       return;
     }
 
-    el.innerHTML = filtered.map(a => {
+    renderPagination(filtered.length, totalPages);
+
+    el.innerHTML = paged.map(a => {
       const prodName   = productMap[a.product_id] || '-';
       const name       = a.customer_name || '<span style="color:var(--gray-300);">-</span>';
       const wa         = a.customer_wa   || '-';
@@ -180,6 +197,31 @@
           </div>
         </div>`;
     }).join('');
+  }
+
+  function renderPagination(total, totalPages) {
+    const pg = document.getElementById('pagination');
+    if (totalPages <= 1) { pg.innerHTML = ''; return; }
+
+    let html = `<button onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹</button>`;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (totalPages > 7 && i > 2 && i < totalPages - 1 && Math.abs(i - currentPage) > 1) {
+        if (i === 3 || i === totalPages - 2) html += `<button disabled>…</button>`;
+        continue;
+      }
+      html += `<button class="${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+    }
+
+    html += `<button onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>›</button>`;
+    html += `<span class="pg-info">${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, total)} dari ${total}</span>`;
+    pg.innerHTML = html;
+  }
+
+  function goPage(p) {
+    currentPage = p;
+    renderList();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function contactWA(id, wa, name, prodName) {

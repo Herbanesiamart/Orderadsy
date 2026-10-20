@@ -463,7 +463,7 @@
               body: JSON.stringify({
                 pixel_code:   product.tiktok_pixel_id,
                 access_token: product.tiktok_access_token,
-                event_name:   'Purchase',
+                event_name:   'CompletePayment',
                 event_id:     'closing_tt_' + id,
                 user_data:    { ph: _o.customer_wa || '', em: _o.customer_email || null },
                 custom_data:  { product_id: _o.product_id, product_name: product.name, value: trackValue || product.price || 0, currency: 'IDR', order_id: id },

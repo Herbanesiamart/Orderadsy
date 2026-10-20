@@ -51,6 +51,16 @@ async function sbPatch(table, query, body) {
   if (!r.ok) throw new Error(await r.text());
 }
 
+async function sbRpc(fn, params = {}) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: getSupabaseHeaders(),
+    body: JSON.stringify(params),
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
 async function sbDelete(table, query) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
     method: 'DELETE', headers: getSupabaseHeaders(),

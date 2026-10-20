@@ -193,16 +193,16 @@
   async function loadPerformance() {
     document.getElementById('perfContent').innerHTML = '<div class="empty-perf">Loading...</div>';
     try {
-      const dateQ = _from && _to
-        ? `&created_at=gte.${_from.toISOString()}&created_at=lte.${_to.toISOString()}` : '';
+      const rpcParams = {};
+      if (_from && _to) { rpcParams.p_from = _from.toISOString(); rpcParams.p_to = _to.toISOString(); }
 
-      const [orders, products, csTeam] = await Promise.all([
-        sbGetAll('orders', `?select=product_id,cs_id,status,closing_qty,closing_value${dateQ}`),
+      const [perfRows, products, csTeam] = await Promise.all([
+        sbRpc('get_cs_performance', rpcParams),
         sbGet('products', '?select=id,name,image_url&status=eq.active&order=name.asc'),
         sbGet('cs_team', '?select=id,name&order=name.asc'),
       ]);
 
-      if (!orders.length) {
+      if (!perfRows.length) {
         document.getElementById('perfContent').innerHTML = '<div class="empty-perf">Tidak ada data di periode ini.</div>';
         return;
       }
@@ -210,14 +210,13 @@
       const csMap      = Object.fromEntries(csTeam.map(c => [c.id, c.name]));
       const productMap = Object.fromEntries(products.map(p => [p.id, p]));
 
-      // Group orders: product → cs
+      // Group RPC result: product → cs
       const byProduct = {};
-      orders.forEach(o => {
+      perfRows.forEach(o => {
         if (!o.product_id) return;
         if (!byProduct[o.product_id]) byProduct[o.product_id] = {};
         const csKey = o.cs_id || '__none__';
-        if (!byProduct[o.product_id][csKey]) byProduct[o.product_id][csKey] = [];
-        byProduct[o.product_id][csKey].push(o);
+        byProduct[o.product_id][csKey] = o;
       });
 
       const productIds = products.map(p => p.id).filter(id => byProduct[id]);
@@ -242,13 +241,12 @@
           (csMap[a] || 'Tanpa CS').localeCompare(csMap[b] || 'Tanpa CS')
         );
 
-        const allPOrders    = csIds.flatMap(cid => csData[cid]);
-        const allClosing    = allPOrders.filter(o => o.status === 'closing');
-        const totalLead     = allPOrders.length;
-        const totalClosing  = allClosing.length;
-        const totalBelum    = allPOrders.filter(o => BELUM_SET.has(o.status)).length;
-        const totalBotol    = allClosing.reduce((s, o) => s + (o.closing_qty || 0), 0);
-        const totalOmset    = allClosing.reduce((s, o) => s + (o.closing_value || 0), 0);
+        const allRows       = csIds.map(cid => csData[cid]);
+        const totalLead     = allRows.reduce((s, r) => s + Number(r.total   || 0), 0);
+        const totalClosing  = allRows.reduce((s, r) => s + Number(r.closing || 0), 0);
+        const totalBelum    = allRows.reduce((s, r) => s + Number(r.belum   || 0), 0);
+        const totalBotol    = allRows.reduce((s, r) => s + Number(r.botol   || 0), 0);
+        const totalOmset    = allRows.reduce((s, r) => s + Number(r.omset   || 0), 0);
         const totalUpsell   = totalClosing > 0 && totalBotol > 0 ? (totalBotol / totalClosing).toFixed(2).replace('.', ',') : null;
         const totalCR       = totalLead > 0 ? Math.round(totalClosing / totalLead * 100) : 0;
         const totalColor    = crColor(totalCR);
@@ -261,14 +259,13 @@
 
         // Rows CS
         let rows = csIds.map(cid => {
-          const csOrders  = csData[cid];
-          const csClosing = csOrders.filter(o => o.status === 'closing');
-          const csName    = csMap[cid] || 'Tanpa CS';
-          const lead      = csOrders.length;
-          const closing   = csClosing.length;
-          const belum     = csOrders.filter(o => BELUM_SET.has(o.status)).length;
-          const botol     = csClosing.reduce((s, o) => s + (o.closing_qty || 0), 0);
-          const omset     = csClosing.reduce((s, o) => s + (o.closing_value || 0), 0);
+          const r       = csData[cid];
+          const csName  = csMap[cid] || 'Tanpa CS';
+          const lead    = Number(r.total   || 0);
+          const closing = Number(r.closing || 0);
+          const belum   = Number(r.belum   || 0);
+          const botol   = Number(r.botol   || 0);
+          const omset   = Number(r.omset   || 0);
           const upsell    = closing > 0 && botol > 0 ? (botol / closing).toFixed(2).replace('.', ',') : null;
           const cr        = lead > 0 ? Math.round(closing / lead * 100) : 0;
           const color     = crColor(cr);

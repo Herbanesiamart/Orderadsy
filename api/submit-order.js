@@ -232,19 +232,26 @@ https://wa.me/${customer_wa}?text=${encodeURIComponent(waMessage)}`;
     }
 
     // BotWA webhook — kirim data order ke BotWA supaya bot auto-WA customer (fire & forget)
+    console.log('[BotWA] token:', product.botwa_form_token || 'KOSONG');
     if (product.botwa_form_token) {
-      fetch('https://csadsy.vercel.app/api/gmail', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          form_token: product.botwa_form_token,
-          nama: customer_name || '',
-          hp: customer_wa,
-          alamat: [customer_address, customer_city].filter(Boolean).join(', '),
-          produk: product.name || '',
-          keluhan: customer_keluhan || '',
-        }),
-      }).catch(e => console.error('[BotWA webhook]', e.message));
+      try {
+        const botwaRes = await fetch('https://csadsy.vercel.app/api/gmail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            form_token: product.botwa_form_token,
+            nama: customer_name || '',
+            hp: customer_wa,
+            alamat: [customer_address, customer_city].filter(Boolean).join(', '),
+            produk: product.name || '',
+            keluhan: customer_keluhan || '',
+          }),
+        });
+        const botwaData = await botwaRes.json().catch(() => ({}));
+        console.log('[BotWA] response:', botwaRes.status, JSON.stringify(botwaData));
+      } catch(e) {
+        console.error('[BotWA] error:', e.message);
+      }
     }
 
     // Meta CAPI

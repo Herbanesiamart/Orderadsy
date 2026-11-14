@@ -95,7 +95,7 @@ module.exports = async function handler(req, res) {
 
     // ── 2. Get product + checkout page (parallel) ─────────────────────
     const [products, checkoutPages] = await Promise.all([
-      sbGet('products', `?id=eq.${product_id}&select=id,name,slug,price,pixel_id,access_token,tiktok_pixel_id,tiktok_access_token,gtm_id,followup_welcome,followup_redirect&limit=1`),
+      sbGet('products', `?id=eq.${product_id}&select=id,name,slug,price,pixel_id,access_token,tiktok_pixel_id,tiktok_access_token,gtm_id,followup_welcome,followup_redirect,botwa_form_token&limit=1`),
       sbGet('checkout_pages', `?id=eq.${checkout_page_id}&select=id,pixel_event&limit=1`),
     ]);
     const product     = products[0];
@@ -229,6 +229,22 @@ https://wa.me/${customer_wa}?text=${encodeURIComponent(waMessage)}`;
           wa_message: waMessageEmail, order_number_today: orderNumberToday,
         }),
       }).catch(() => {});
+    }
+
+    // BotWA webhook — kirim data order ke BotWA supaya bot auto-WA customer (fire & forget)
+    if (product.botwa_form_token) {
+      fetch('https://csadsy.vercel.app/api/gmail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          form_token: product.botwa_form_token,
+          nama: customer_name || '',
+          hp: customer_wa,
+          alamat: [customer_address, customer_city].filter(Boolean).join(', '),
+          produk: product.name || '',
+          keluhan: customer_keluhan || '',
+        }),
+      }).catch(e => console.error('[BotWA webhook]', e.message));
     }
 
     // Meta CAPI

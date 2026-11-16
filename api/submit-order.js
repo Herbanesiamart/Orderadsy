@@ -231,15 +231,18 @@ https://wa.me/${customer_wa}?text=${encodeURIComponent(waMessage)}`;
       }).catch(() => {});
     }
 
-    // BotWA webhook — kirim data order ke BotWA supaya bot auto-WA customer (fire & forget)
-    console.log('[BotWA] token:', product.botwa_form_token || 'KOSONG');
-    if (product.botwa_form_token) {
+    // BotWA webhook — kirim data order ke BotWA supaya bot auto-WA customer
+    const botwaTokens = (product.botwa_form_token || '').split(',').map(t => t.trim()).filter(Boolean);
+    console.log('[BotWA] tokens:', botwaTokens.length || 'KOSONG');
+    if (botwaTokens.length) {
+      const pickedToken = botwaTokens[Math.floor(Math.random() * botwaTokens.length)];
+      console.log('[BotWA] picked:', pickedToken, `(${botwaTokens.length} total)`);
       try {
         const botwaRes = await fetch('https://csadsy.vercel.app/api/gmail', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            form_token: product.botwa_form_token,
+            form_token: pickedToken,
             nama: customer_name || '',
             hp: customer_wa,
             alamat: [customer_address, customer_city].filter(Boolean).join(', '),

@@ -304,8 +304,8 @@
       <div class="section-title mb-16">🤖 BotWA (Adsy CS AI)</div>
       <div class="form-group">
         <label class="form-label">Form Token BotWA</label>
-        <input type="text" class="form-control" id="editBotwaToken" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
-        <div class="form-hint">Ambil dari BotWA → Settings → Integrasi Gmail → Form Token. Kalau diisi, order dari produk ini akan otomatis di-handle bot WA.</div>
+        <textarea class="form-control" id="editBotwaToken" rows="4" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx&#10;yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy" style="font-family:monospace;font-size:12.5px;"></textarea>
+        <div class="form-hint">Ambil dari BotWA → Settings → Integrasi Gmail → Form Token. <strong>1 token per baris.</strong> Kalau isi lebih dari 1, order akan dibagi rata ke semua bot CS secara acak.</div>
       </div>
       <div style="background:var(--blue-light,#EFF6FF);border:1px solid #BFDBFE;border-radius:var(--radius-sm);padding:12px 16px;font-size:13px;color:var(--primary);margin-bottom:16px;">
         ℹ️ Kosongkan jika produk ini masih di-handle CS manual. Hanya isi untuk produk yang sudah aktif di BotWA.
@@ -428,7 +428,7 @@
       document.getElementById('editGtmId').value = product.gtm_id || '';
       document.getElementById('editTikTokPixelId').value = product.tiktok_pixel_id || '';
       document.getElementById('editTikTokAccessToken').value = product.tiktok_access_token || '';
-      document.getElementById('editBotwaToken').value = product.botwa_form_token || '';
+      document.getElementById('editBotwaToken').value = (product.botwa_form_token || '').split(',').map(t => t.trim()).filter(Boolean).join('\n');
 
       loadStats();
       loadCheckoutPages();
@@ -763,10 +763,12 @@
 
   async function saveBotwa() {
     try {
+      const raw = document.getElementById('editBotwaToken').value;
+      const tokens = raw.split(/[\n,]+/).map(t => t.trim()).filter(Boolean);
       await sbPatch('products', `?id=eq.${productId}`, {
-        botwa_form_token: document.getElementById('editBotwaToken').value.trim() || null,
+        botwa_form_token: tokens.length ? tokens.join(',') : null,
       });
-      showToast('BotWA setting disimpan', 'success');
+      showToast(`BotWA setting disimpan (${tokens.length} token)`, 'success');
     } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
   }
 

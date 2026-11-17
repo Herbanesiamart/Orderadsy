@@ -68,6 +68,11 @@
         <div class="form-hint">CS akan pakai email + password ini untuk masuk dashboard</div>
       </div>
       <div class="form-group">
+        <label class="form-label">BotWA Token</label>
+        <input type="text" class="form-control" id="csBotwaToken" placeholder="Kosongkan jika CS manual (tanpa bot)">
+        <div class="form-hint">Form token dari BotWA. Jika diisi, order akan dihandle bot otomatis. Kosong = CS manual via Fonnte.</div>
+      </div>
+      <div class="form-group">
         <label class="form-label">Status</label>
         <div class="toggle-wrap">
           <button class="toggle on" id="csStatusToggle" onclick="toggleStatus()"></button>
@@ -114,7 +119,10 @@
           <div style="font-weight:700;font-size:15px;">${cs.name}</div>
           <div style="font-size:12px;color:var(--gray-400);">💬 ${cs.wa_number}</div>
           ${cs.email ? `<div style="font-size:12px;color:var(--gray-400);">📧 ${cs.email}</div>` : ''}
-          <span class="badge ${cs.is_active?'badge-green':'badge-gray'}" style="margin-top:4px;">${cs.is_active?'Active':'Inactive'}</span>
+          <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
+            <span class="badge ${cs.is_active?'badge-green':'badge-gray'}">${cs.is_active?'Active':'Inactive'}</span>
+            ${cs.botwa_form_token ? '<span class="badge badge-blue" style="background:#EFF6FF;color:#2563EB;">🤖 BotWA</span>' : '<span class="badge badge-gray">Manual</span>'}
+          </div>
         </div>
         <div class="flex gap-8" style="flex-direction:column;align-items:flex-end;">
           <button class="btn btn-outline btn-sm" onclick="openEditModal('${cs.id}')">Edit</button>
@@ -132,6 +140,7 @@
     document.getElementById('csWA').value = '';
     document.getElementById('csEmail').value = '';
     document.getElementById('csPassword').value = '';
+    document.getElementById('csBotwaToken').value = '';
     setStatusUI(true);
     document.getElementById('csModal').classList.remove('hidden');
   }
@@ -147,6 +156,7 @@
     document.getElementById('csWA').value = cs.wa_number;
     document.getElementById('csEmail').value = cs.email || '';
     document.getElementById('csPassword').value = cs.password || '';
+    document.getElementById('csBotwaToken').value = cs.botwa_form_token || '';
     setStatusUI(cs.is_active);
     document.getElementById('csModal').classList.remove('hidden');
   }
@@ -166,10 +176,11 @@
   }
 
   async function saveCS() {
-    const name     = document.getElementById('csName').value.trim();
-    const wa       = document.getElementById('csWA').value.trim();
-    const email    = document.getElementById('csEmail').value.trim();
-    const password = document.getElementById('csPassword').value.trim();
+    const name        = document.getElementById('csName').value.trim();
+    const wa          = document.getElementById('csWA').value.trim();
+    const email       = document.getElementById('csEmail').value.trim();
+    const password    = document.getElementById('csPassword').value.trim();
+    const botwaToken  = document.getElementById('csBotwaToken').value.trim() || null;
 
     if (!name)     { showToast('Nama CS wajib diisi', 'error'); return; }
     if (!wa)       { showToast('No. WhatsApp wajib diisi', 'error'); return; }
@@ -177,7 +188,7 @@
     if (!password) { showToast('Password wajib diisi', 'error'); return; }
 
     const waFormatted = normalizeWA(wa);
-    const payload = { name, wa_number: waFormatted, email, password, is_active: csActive };
+    const payload = { name, wa_number: waFormatted, email, password, is_active: csActive, botwa_form_token: botwaToken };
 
     try {
       if (editingId) {

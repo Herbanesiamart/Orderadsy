@@ -95,7 +95,7 @@ module.exports = async function handler(req, res) {
 
     // ── 2. Get product + checkout page (parallel) ─────────────────────
     const [products, checkoutPages] = await Promise.all([
-      sbGet('products', `?id=eq.${product_id}&select=id,name,slug,price,pixel_id,access_token,tiktok_pixel_id,tiktok_access_token,gtm_id,followup_welcome,followup_redirect,botwa_form_token&limit=1`),
+      sbGet('products', `?id=eq.${product_id}&select=id,name,slug,price,pixel_id,access_token,tiktok_pixel_id,tiktok_access_token,gtm_id,followup_welcome,followup_redirect&limit=1`),
       sbGet('checkout_pages', `?id=eq.${checkout_page_id}&select=id,pixel_event&limit=1`),
     ]);
     const product     = products[0];
@@ -104,7 +104,7 @@ module.exports = async function handler(req, res) {
 
     // ── 3. Get assigned CS + rotator (parallel) ───────────────────────
     const [assignedRows, rotatorRows] = await Promise.all([
-      sbGet('product_cs', `?product_id=eq.${product_id}&select=cs_team(id,name,wa_number,email)`),
+      sbGet('product_cs', `?product_id=eq.${product_id}&select=cs_team(id,name,wa_number,email,botwa_form_token)`),
       sbGet('cs_rotator', `?product_id=eq.${product_id}&select=last_cs_index&limit=1`),
     ]);
     const assignedCS   = assignedRows.map(r => r.cs_team).filter(Boolean);
@@ -178,8 +178,9 @@ module.exports = async function handler(req, res) {
       ).catch(() => {});
     }
 
-    // WA notif ke CS via Fonnte — di-await agar tidak di-kill Vercel sebelum terkirim
-    if (cs?.wa_number && FONNTE_TOKEN) {
+    // WA notif ke CS via Fonnte — skip kalau CS ini pakai BotWA (biar bot yang handle)
+    const hasBotwa = !!(cs?.botwa_form_token);
+    if (cs?.wa_number && FONNTE_TOKEN && !hasBotwa) {
       const waMessage = fillTemplate(
         product.followup_welcome ||
         'Halo Kak {{name}}, saya {{cs_name}}. Terima kasih sudah order ya kak!\n\nNama     : {{name}}\nNo. WA   : {{phone}}\nAlamat   : {{address}}\n\nSudah benar ya kak? 😊',
@@ -211,8 +212,8 @@ https://wa.me/${customer_wa}?text=${encodeURIComponent(waMessage)}`;
       }
     }
 
-    // Email notif ke CS (backup, fire & forget)
-    if (cs?.email) {
+    // Email notif ke CS (backup, fire & forget) — skip kalau BotWA aktif
+    if (cs?.email && !hasBotwa) {
       const waMessageEmail = fillTemplate(
         product.followup_welcome ||
         'Halo Kak {{name}}, saya {{cs_name}}. Terima kasih sudah order ya kak!\n\nNama     : {{name}}\nNo. WA   : {{phone}}\nAlamat   : {{address}}\n\nSudah benar ya kak? 😊',
@@ -231,18 +232,16 @@ https://wa.me/${customer_wa}?text=${encodeURIComponent(waMessage)}`;
       }).catch(() => {});
     }
 
-    // BotWA webhook — kirim data order ke BotWA supaya bot auto-WA customer
-    const botwaTokens = (product.botwa_form_token || '').split(',').map(t => t.trim()).filter(Boolean);
-    console.log('[BotWA] tokens:', botwaTokens.length || 'KOSONG');
-    if (botwaTokens.length) {
-      const pickedToken = botwaTokens[Math.floor(Math.random() * botwaTokens.length)];
-      console.log('[BotWA] picked:', pickedToken, `(${botwaTokens.length} total)`);
+    // BotWA webhook — kirim data order ke BotWA via form_token CS yang kepilih rotator
+    // Token ada di cs_team.botwa_form_token — kalau null berarti CS manual (Fonnte)
+    if (hasBotwa) {
+      console.log('[BotWA] CS:', cs.name, '| token:', cs.botwa_form_token);
       try {
         const botwaRes = await fetch('https://csadsy.vercel.app/api/gmail', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            form_token: pickedToken,
+            form_token: cs.botwa_form_token,
             nama: customer_name || '',
             hp: customer_wa,
             alamat: [customer_address, customer_city].filter(Boolean).join(', '),
